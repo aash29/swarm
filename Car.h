@@ -53,12 +53,23 @@ public:
 			bd.position.Set(x,y);
 
 			bb.box = m_world->CreateBody(&bd);
-			bb.fix = bb.box->CreateFixture(&chassis, 1.0f);
+
+			b2FixtureDef fd0;
+			fd0.shape = &chassis;
+			fd0.density = 1.0f;
+			fd0.friction = 0.9f;
+			fd0.filter.groupIndex=2;
+
+
+
+			bb.fix = bb.box->CreateFixture(&fd0);
+
 
 			b2FixtureDef fd;
 			fd.shape = &circle;
 			fd.density = 1.0f;
 			fd.friction = 0.9f;
+			fd.filter.groupIndex=2;
 
 
 			bd.position.Set(x,y);
@@ -124,9 +135,10 @@ public:
 		b2RevoluteJointDef jd;
 		b2Vec2 axis(0.0f, 1.0f);
 
-		jd.Initialize(b1.box, b2.box, ((b2PolygonShape*)(b1.fix->GetShape()))->m_vertices[0]);
+		jd.Initialize(b1.box, b2.box, b1.box->GetWorldCenter()+ ((b2PolygonShape*)(b1.fix->GetShape()))->m_vertices[0]);
 
 		(b2RevoluteJoint*)m_world->CreateJoint(&jd);
+
 	}
 
 
