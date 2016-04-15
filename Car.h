@@ -19,6 +19,42 @@
 #ifndef CAR_H
 #define CAR_H
 
+#include <vector>
+#include <iostream>
+//#include <Box2D/Common/b2Math.h>
+
+class QueryCallback : public b2QueryCallback
+{
+public:
+	QueryCallback(const b2Vec2& point)
+	{
+		m_point = point;
+		m_fixture = NULL;
+	}
+
+	bool ReportFixture(b2Fixture* fixture)
+	{
+		b2Body* body = fixture->GetBody();
+		if (body->GetType() == b2_dynamicBody)
+		{
+			bool inside = fixture->TestPoint(m_point);
+			if (inside)
+			{
+				m_fixture = fixture;
+
+				// We are done, terminate the query.
+				return false;
+			}
+		}
+
+		// Continue the query.
+		return true;
+	}
+
+	b2Vec2 m_point;
+	b2Fixture* m_fixture;
+};
+
 // This is a fun demo that shows off the wheel joint
 class Car : public Test {
 public:
@@ -129,19 +165,24 @@ public:
 
 		//m_car=createBox(0.f,2.f);
 
-		b1=createBox(0.f,2.f);
 
-		b2=createBox(2.f,2.f);
+		bots = new std::vector<boxBot>;
+		bots->push_back(createBox(2.f,2.f));
+		bots->push_back(createBox(0.f,2.f));
+		//b1=createBox(0.f,2.f);
+
+		//b2=createBox(2.f,2.f);
 
 		b2RevoluteJointDef jd;
-		b2Vec2 axis(0.0f, 1.0f);
 		jd.collideConnected = true;
 
 
-		jd.Initialize(b1.box, b2.box, b1.box->GetWorldCenter()+ ((b2PolygonShape*)(b1.fix->GetShape()))->m_vertices[0]);
+		jd.Initialize((*bots)[0].box, (*bots)[1].box, (*bots)[1].box->GetWorldCenter() + ((b2PolygonShape*)((*bots)[1].fix->GetShape()))->m_vertices[0]);
 
 		(b2RevoluteJoint*)m_world->CreateJoint(&jd);
 
+
+		currentBot=&((*bots)[0]);
 	}
 
 
@@ -151,24 +192,63 @@ public:
 		switch (key)
 		{
 		case GLFW_KEY_A:
-			b1.spring->SetMotorSpeed(-m_speed);
+			currentBot->spring->SetMotorSpeed(-m_speed);
 			break;
 
 		case GLFW_KEY_D:
-			b1.spring->SetMotorSpeed(m_speed);
+			currentBot->spring->SetMotorSpeed(m_speed);
 			break;
 
 		case GLFW_KEY_S:
-			b1.spring->SetMotorSpeed(0.0f);
+			currentBot->spring->SetMotorSpeed(0.0f);
 			break;
 
 		}
 	}
 
+
+	void MouseDown(const b2Vec2& p)
+	{
+
+		m_mouseWorld = p;
+
+		// Make a small box.
+		b2AABB aabb;
+		b2Vec2 d;
+		d.Set(0.001f, 0.001f);
+		aabb.lowerBound = p - d;
+		aabb.upperBound = p + d;
+
+		// Query the world for overlapping shapes.
+		QueryCallback callback(p);
+		m_world->QueryAABB(&callback, aabb);
+
+		if (callback.m_fixture)
+		{
+
+			b2Transform transform;
+
+			transform.SetIdentity();
+
+			b2Vec2 point(5.0f, 2.0f);
+
+			b2CircleShape s1;
+			s1.m_radius = 0.1f;
+
+			bool hit = s1.TestPoint(transform, point);
+
+
+		}
+
+		std::cout << "hit";
+
+	}
+
+
 	void Step(Settings* settings)
 	{
 
-		g_camera.m_center.x = b1.box->GetPosition().x;
+		g_camera.m_center.x = (*bots)[0].box->GetPosition().x;
 		Test::Step(settings);
 	}
 
@@ -178,12 +258,14 @@ public:
 	}
 
 
-	boxBot b1;
-	boxBot b2;
 
+
+	std::vector <boxBot> *bots;
+
+	boxBot* currentBot;
 
 	float32 m_speed;
-	b2RevoluteJoint* m_spring1;
+	std::vector <b2RevoluteJoint*> magnets;
 };
 
 #endif
