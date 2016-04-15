@@ -85,6 +85,7 @@ public:
 			jd.maxMotorTorque = 600.0f;
 			jd.enableMotor = true;
 
+
 			bb.spring = (b2RevoluteJoint*)m_world->CreateJoint(&jd);
 
 			return bb;
@@ -134,6 +135,8 @@ public:
 
 		b2RevoluteJointDef jd;
 		b2Vec2 axis(0.0f, 1.0f);
+		jd.collideConnected = true;
+
 
 		jd.Initialize(b1.box, b2.box, b1.box->GetWorldCenter()+ ((b2PolygonShape*)(b1.fix->GetShape()))->m_vertices[0]);
 
