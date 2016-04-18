@@ -68,6 +68,20 @@ public:
 		b2Fixture* fix;
 	};
 
+
+    boxBot* body2Bot(b2Body* b1)
+    {
+        for (std::vector <boxBot>::iterator bb = bots->begin(); bb!= bots->end();bb++) {
+            if ((b1 == bb->box) || (b1 == bb->wheel))
+            {
+                return &(*bb);
+            }
+        }
+        return 0;
+
+
+    };
+
 	boxBot createBox(float x, float y)
 	{
 			boxBot bb;
@@ -179,7 +193,9 @@ public:
 
 		jd.Initialize((*bots)[0].box, (*bots)[1].box, (*bots)[1].box->GetWorldCenter() + ((b2PolygonShape*)((*bots)[1].fix->GetShape()))->m_vertices[0]);
 
-		(b2RevoluteJoint*)m_world->CreateJoint(&jd);
+
+        magnets = new std::vector<b2RevoluteJoint*>;
+		magnets->push_back((b2RevoluteJoint*)m_world->CreateJoint(&jd));
 
 
 		currentBot=&((*bots)[0]);
@@ -206,6 +222,8 @@ public:
 		}
 	}
 
+    //boxBot* body2bot(b2)
+
 
 	void MouseDown(const b2Vec2& p)
 	{
@@ -226,21 +244,34 @@ public:
 		if (callback.m_fixture)
 		{
 
+			b2Body* body = callback.m_fixture->GetBody();
+
+            currentBot = body2Bot(body);
+
+			//currentBot = body;
+
 			b2Transform transform;
 
-			transform.SetIdentity();
+            transform.Set(p,0.f);
 
-			b2Vec2 point(5.0f, 2.0f);
+			b2Vec2 point(currentBot->box->GetWorldCenter() + ((b2PolygonShape*)(currentBot->fix->GetShape()))->m_vertices[0]);
 
 			b2CircleShape s1;
-			s1.m_radius = 0.1f;
+			s1.m_radius = 0.2f;
 
 			bool hit = s1.TestPoint(transform, point);
+            std::cout << hit;
 
+            if (hit)
+            {
+                m_world->DestroyJoint((*magnets)[0]);
+                (*magnets).pop_back();
+
+                return;
+            }
 
 		}
 
-		std::cout << "hit";
 
 	}
 
@@ -265,7 +296,7 @@ public:
 	boxBot* currentBot;
 
 	float32 m_speed;
-	std::vector <b2RevoluteJoint*> magnets;
+	std::vector <b2RevoluteJoint*> *magnets;
 };
 
 #endif
