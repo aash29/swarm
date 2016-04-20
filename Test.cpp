@@ -41,6 +41,7 @@ Test::Test()
 	m_mouseJoint = NULL;
 	m_pointCount = 0;
 
+
 	m_destructionListener.test = this;
 	m_world->SetDestructionListener(&m_destructionListener);
 	m_world->SetContactListener(this);

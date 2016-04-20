@@ -1,2 +1,1 @@
-g++ Main.cpp Test.cpp DebugDraw.cpp RenderGL3.cpp TestEntries.cpp imgui.cpp
- -lGLEW -lglfw -lGL -lBox2D -c box2d
+g++ main.cpp Test.cpp DebugDraw.cpp RenderGL3.cpp TestEntries.cpp imgui.cpp -lGLEW -lglfw -lGL -lBox2D -o box2d
