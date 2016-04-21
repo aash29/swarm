@@ -21,7 +21,8 @@
 
 #include <vector>
 #include <iostream>
-//#include <Box2D/Common/b2Math.h>
+#include "imgui.h"
+#include "graph.h"
 
 class QueryCallback : public b2QueryCallback
 {
@@ -66,6 +67,7 @@ public:
 		b2Body* wheel;
 		b2RevoluteJoint* spring;
 		b2Fixture* fix;
+		float buffer[100];
 	};
 
 
@@ -280,8 +282,46 @@ public:
 	{
 
 		g_camera.m_center.x = (*bots)[0].box->GetPosition().x;
+
+
+        for (std::vector <boxBot>::iterator bb = bots->begin(); bb!= bots->end();bb++) {
+            for (int i=0; i<IM_ARRAYSIZE(bb->buffer);i++) {
+                bb->buffer[i] = bb->buffer[(i+1) % IM_ARRAYSIZE(bb->buffer)];
+            }
+            bb->buffer[IM_ARRAYSIZE(bb->buffer)-1] = bb->box->GetPosition().x;
+        }
+
 		Test::Step(settings);
 	}
+
+
+    void plotGraphs()
+    {
+
+
+        ImVec2 foo[10];
+
+        foo[0].x = 0; // init data so editor knows to take it from here
+
+        for (int i=0;i<10;i++)
+        {
+            foo[i].x = i*0.1f;
+            foo[i].y = i*0.1f;
+        }
+
+
+        float foo2[100];
+        for (int i=0;i<100;i++)
+        {
+            foo2[i]=sinf(i*0.1f);
+        }
+
+        bool f = true;
+        ImGui::GraphTestWindow( (*bots)[0].buffer,100);
+
+        ImGui::Curve("Curve", ImVec2(600, 200), 10, foo);
+
+    }
 
 	static Test* Create()
 	{

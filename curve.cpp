@@ -30,19 +30,17 @@ namespace ImGui
 //#include "imgui_internal.h"
 
 #include <cmath>
+#include <algorithm>
 namespace ImGui
 {
+    void GraphTestWindow(float* values,int values_count) {
+          static bool animate = true;
+          ImGui::Checkbox("Animate", &animate);
 
-    void GraphTestWindow(bool *p_opened) {
-        if (ImGui::CollapsingHeader("Graphs widgets")) {
-            static bool animate = true;
-            ImGui::Checkbox("Animate", &animate);
-
-            static float arr[] = {0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f};
-            ImGui::PlotLines("Frame Times", arr, IM_ARRAYSIZE(arr));
 
             // Create a dummy array of contiguous float values to plot
             // Tip: If your float aren't contiguous but part of a structure, you can pass a pointer to your first float and the sizeof() of your structure in the Stride parameter.
+            /*
             static float values[90] = {0};
             static int values_offset = 0;
             if (animate) {
@@ -54,30 +52,113 @@ namespace ImGui
                     phase += 0.10f * values_offset;
                 }
             }
-            ImGui::PlotLines("Lines", values, IM_ARRAYSIZE(values), values_offset, "avg 0.0", -1.0f, 1.0f,
-                             ImVec2(0, 80));
-            ImGui::PlotHistogram("Histogram", arr, IM_ARRAYSIZE(arr), 0, NULL, 0.0f, 1.0f, ImVec2(0, 80));
 
-            // Use functions to generate output
-            // FIXME: This is rather awkward because current plot API only pass in indices. We probably want an API passing floats and user provide sample rate/count.
-            struct Funcs {
-                static float Sin(void *, int i) { return sinf(i * 0.1f); }
+             */
+          ImGui::PlotLines("Lines", values, values_count, 0, "buffer", *(std::min_element(values, values+values_count)), *(std::max_element(values, values+values_count)), ImVec2(300, 200));
 
-                static float Saw(void *, int i) { return (i & 1) ? 1.0f : 0.0f; }
-            };
-            static int func_type = 0, display_count = 70;
+          ImGui::Separator();
+
+
+
+            ImGui::SetNextWindowSize(ImVec2(350,560), ImGuiSetCond_FirstUseEver);
+            if (!ImGui::Begin("Example: Custom rendering", &animate))
+            {
+                ImGui::End();
+                return;
+            }
+
+            // Tip: If you do a lot of custom rendering, you probably want to use your own geometrical types and benefit of overloaded operators, etc.
+            // Define IM_VEC2_CLASS_EXTRA in imconfig.h to create implicit conversions between your types and ImVec2/ImVec4.
+            // ImGui defines overloaded operators but they are internal to imgui.cpp and not exposed outside (to avoid messing with your types)
+            // In this example we are not using the maths operators!
+            ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+            // Primitives
+            ImGui::Text("Primitives");
+            static float sz = 36.0f;
+            static ImVec4 col = ImVec4(1.0f,1.0f,0.4f,1.0f);
+            ImGui::DragFloat("Size", &sz, 0.2f, 2.0f, 72.0f, "%.0f");
+            ImGui::ColorEdit3("Color", &col.x);
+            {
+                const ImVec2 p = ImGui::GetCursorScreenPos();
+                const ImU32 col32 = ImColor(col);
+                float x = p.x + 4.0f, y = p.y + 4.0f, spacing = 8.0f;
+                for (int n = 0; n < 2; n++)
+                {
+                    float thickness = (n == 0) ? 1.0f : 4.0f;
+                    draw_list->AddCircle(ImVec2(x+sz*0.5f, y+sz*0.5f), sz*0.5f, col32, 20, thickness); x += sz+spacing;
+                    draw_list->AddRect(ImVec2(x, y), ImVec2(x+sz, y+sz), col32, 0.0f, ~0, thickness); x += sz+spacing;
+                    draw_list->AddRect(ImVec2(x, y), ImVec2(x+sz, y+sz), col32, 10.0f, ~0, thickness); x += sz+spacing;
+                    draw_list->AddTriangle(ImVec2(x+sz*0.5f, y), ImVec2(x+sz,y+sz-0.5f), ImVec2(x,y+sz-0.5f), col32, thickness); x += sz+spacing;
+                    draw_list->AddLine(ImVec2(x, y), ImVec2(x+sz, y   ), col32, thickness); x += sz+spacing;
+                    draw_list->AddLine(ImVec2(x, y), ImVec2(x+sz, y+sz), col32, thickness); x += sz+spacing;
+                    draw_list->AddLine(ImVec2(x, y), ImVec2(x,    y+sz), col32, thickness); x += spacing;
+                    draw_list->AddBezierCurve(ImVec2(x, y), ImVec2(x+sz*1.3f,y+sz*0.3f), ImVec2(x+sz-sz*1.3f,y+sz-sz*0.3f), ImVec2(x+sz, y+sz), col32, thickness);
+                    x = p.x + 4;
+                    y += sz+spacing;
+                }
+                draw_list->AddCircleFilled(ImVec2(x+sz*0.5f, y+sz*0.5f), sz*0.5f, col32, 32); x += sz+spacing;
+                draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x+sz, y+sz), col32); x += sz+spacing;
+                draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x+sz, y+sz), col32, 10.0f); x += sz+spacing;
+                draw_list->AddTriangleFilled(ImVec2(x+sz*0.5f, y), ImVec2(x+sz,y+sz-0.5f), ImVec2(x,y+sz-0.5f), col32); x += sz+spacing;
+                draw_list->AddRectFilledMultiColor(ImVec2(x, y), ImVec2(x+sz, y+sz), ImColor(0,0,0), ImColor(255,0,0), ImColor(255,255,0), ImColor(0,255,0));
+                ImGui::Dummy(ImVec2((sz+spacing)*8, (sz+spacing)*3));
+            }
             ImGui::Separator();
-            ImGui::PushItemWidth(100);
-            ImGui::Combo("func", &func_type, "Sin\0Saw\0");
-            ImGui::PopItemWidth();
-            ImGui::SameLine();
-            ImGui::SliderInt("Sample count", &display_count, 1, 500);
-            float (*func)(void *, int) = (func_type == 0) ? Funcs::Sin : Funcs::Saw;
-            ImGui::PlotLines("Lines", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0, 80));
-            ImGui::PlotHistogram("Histogram", func, NULL, display_count, 0, NULL, -1.0f, 1.0f, ImVec2(0, 80));
-            ImGui::Separator();
-        }
+            {
+                static ImVector<ImVec2> points;
+                static bool adding_line = false;
+                ImGui::Text("Canvas example");
+                if (ImGui::Button("Clear")) points.clear();
+                if (points.Size >= 2) { ImGui::SameLine(); if (ImGui::Button("Undo")) { points.pop_back(); points.pop_back(); } }
+                ImGui::Text("Left-click and drag to add lines,\nRight-click to undo");
+
+                // Here we are using InvisibleButton() as a convenience to 1) advance the cursor and 2) allows us to use IsItemHovered()
+                // However you can draw directly and poll mouse/keyboard by yourself. You can manipulate the cursor using GetCursorPos() and SetCursorPos().
+                // If you only use the ImDrawList API, you can notify the owner window of its extends by using SetCursorPos(max).
+                ImVec2 canvas_pos = ImGui::GetCursorScreenPos();            // ImDrawList API uses screen coordinates!
+                ImVec2 canvas_size = ImGui::GetContentRegionAvail();        // Resize canvas to what's available
+                if (canvas_size.x < 50.0f) canvas_size.x = 50.0f;
+                if (canvas_size.y < 50.0f) canvas_size.y = 50.0f;
+                draw_list->AddRectFilledMultiColor(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(50,50,50), ImColor(50,50,60), ImColor(60,60,70), ImColor(50,50,60));
+                draw_list->AddRect(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(255,255,255));
+
+                bool adding_preview = false;
+                ImGui::InvisibleButton("canvas", canvas_size);
+                if (ImGui::IsItemHovered())
+                {
+                    ImVec2 mouse_pos_in_canvas = ImVec2(ImGui::GetIO().MousePos.x - canvas_pos.x, ImGui::GetIO().MousePos.y - canvas_pos.y);
+                    if (!adding_line && ImGui::IsMouseClicked(0))
+                    {
+                        points.push_back(mouse_pos_in_canvas);
+                        adding_line = true;
+                    }
+                    if (adding_line)
+                    {
+                        adding_preview = true;
+                        points.push_back(mouse_pos_in_canvas);
+                        if (!ImGui::GetIO().MouseDown[0])
+                            adding_line = adding_preview = false;
+                    }
+                    if (ImGui::IsMouseClicked(1) && !points.empty())
+                    {
+                        adding_line = adding_preview = false;
+                        points.pop_back();
+                        points.pop_back();
+                    }
+                }
+                draw_list->PushClipRect(ImVec4(canvas_pos.x, canvas_pos.y, canvas_pos.x+canvas_size.x, canvas_pos.y+canvas_size.y));      // clip lines within the canvas (if we resize it, etc.)
+                for (int i = 0; i < points.Size - 1; i += 2)
+                    draw_list->AddLine(ImVec2(canvas_pos.x + points[i].x, canvas_pos.y + points[i].y), ImVec2(canvas_pos.x + points[i+1].x, canvas_pos.y + points[i+1].y), 0xFF00FFFF, 2.0f);
+                draw_list->PopClipRect();
+                if (adding_preview)
+                    points.pop_back();
+            }
+            ImGui::End();
+
     }
+
+
 
     float CurveValue(float p, int maxpoints, const ImVec2 *points)
     {

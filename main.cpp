@@ -20,6 +20,11 @@
 #include "RenderGL3.h"
 #include "DebugDraw.h"
 #include "Test.h"
+#include "Car.h"
+
+#include "imgui_impl_glfw_gl3.h"
+
+#include "graph.h"
 
 #if defined(__APPLE__)
 #include <OpenGL/gl3.h>
@@ -28,8 +33,12 @@
 #endif
 
 #include <GLFW/glfw3.h>
+#include "imgui_impl_glfw_gl3.h"
+
+
+#include <GLFW/glfw3.h>
 #include <stdio.h>
-#include "imgui.h"
+
 
 #ifdef _MSC_VER
 #define snprintf _snprintf
@@ -79,6 +88,7 @@ static void sCreateUI()
 		assert(false);
 		return;
 	}
+
 }
 
 //
@@ -319,6 +329,8 @@ static void sSimulate()
 	test->Step(&settings);
 
 	test->DrawTitle(entry->name);
+
+	((Car*)test)->plotGraphs();
 	glDisable(GL_DEPTH_TEST);
 
 	if (testSelection != testIndex)
@@ -338,12 +350,14 @@ static void sInterface() {
 	bool show_another_window = true;
 	int menuWidth = 200;
 	ui.mouseOverMenu = false;
+	/*
 	if (ui.showMenu) {
 		ImGui::SetNextWindowSize(ImVec2(200, 100), ImGuiSetCond_FirstUseEver);
 		ImGui::Begin("Another Window", &show_another_window);
 		ImGui::Text("Hello");
 		ImGui::End();
 	}
+	 */
 }
 		/*
 
@@ -456,15 +470,16 @@ int main(int argc, char** argv)
 	char title[64];
 	sprintf(title, "Box2D Testbed Version %d.%d.%d", b2_version.major, b2_version.minor, b2_version.revision);
 
-#if defined(__APPLE__)
-	// Not sure why, but these settings cause glewInit below to crash.
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#endif
+
 
     mainWindow = glfwCreateWindow(g_camera.m_width, g_camera.m_height, title, NULL, NULL);
+
+	//gl3wInit();
+
+	// Setup ImGui binding
+
+	ImGui_ImplGlfwGL3_Init(mainWindow, true);
+
 	if (mainWindow == NULL)
 	{
 		fprintf(stderr, "Failed to open GLFW mainWindow.\n");
@@ -482,15 +497,15 @@ int main(int argc, char** argv)
 	glfwSetCursorPosCallback(mainWindow, sMouseMotion);
 	glfwSetScrollCallback(mainWindow, sScrollCallback);
 
-#if defined(__APPLE__) == FALSE
-	//glewExperimental = GL_TRUE;
-    GLenum err = glewInit();
-	if (GLEW_OK != err)
-	{
-		fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
-		exit(EXIT_FAILURE);
-	}
-#endif
+	#if defined(__APPLE__) == FALSE
+		//glewExperimental = GL_TRUE;
+		GLenum err = glewInit();
+		if (GLEW_OK != err)
+		{
+			fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
+			exit(EXIT_FAILURE);
+		}
+	#endif
 
 	g_debugDraw.Create();
 
@@ -516,7 +531,10 @@ int main(int argc, char** argv)
 
     glClearColor(0.3f, 0.3f, 0.3f, 1.f);
 
- 	while (!glfwWindowShouldClose(mainWindow))
+
+
+
+	while (!glfwWindowShouldClose(mainWindow))
 	{
  		glfwGetWindowSize(mainWindow, &g_camera.m_width, &g_camera.m_height);
 		glViewport(0, 0, g_camera.m_width, g_camera.m_height);
@@ -534,10 +552,14 @@ int main(int argc, char** argv)
 
 		mousey = g_camera.m_height - mousey;
 		int leftButton = glfwGetMouseButton(mainWindow, GLFW_MOUSE_BUTTON_LEFT);
-		if (leftButton == GLFW_PRESS)
-			mousebutton |= IMGUI_MBUT_LEFT;
 
-		imguiBeginFrame(mousex, mousey, mousebutton, mscroll);
+
+		glfwPollEvents();
+		ImGui_ImplGlfwGL3_NewFrame();
+
+
+		// 1. Show a simple window
+		// Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
 
 		sSimulate();
 		sInterface();
@@ -556,7 +578,7 @@ int main(int argc, char** argv)
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glDisable(GL_DEPTH_TEST);
 		RenderGLFlush(g_camera.m_width, g_camera.m_height);
-
+		ImGui::Render();
 		glfwSwapBuffers(mainWindow);
 
 		glfwPollEvents();
