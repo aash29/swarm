@@ -1,33 +1,4 @@
-//
-// Created by aash29 on 20.04.16.
-//
-
-/* To use, add this prototype somewhere..
-
-namespace ImGui
-{
-	int Curve(const char *label, const ImVec2& size, int maxpoints, ImVec2 *points);
-	float CurveValue(float p, int maxpoints, const ImVec2 *points);
-};
-
-*/
-/*
-	Example of use:
-
-	ImVec2 foo[10];
-	...
-	foo[0].x = -1; // init data so editor knows to take it from here
-	...
-	if (ImGui::Curve("Das editor", ImVec2(600, 200), 10, foo))
-	{
-		// curve changed
-	}
-	...
-	float value_you_care_about = ImGui::CurveValue(0.7f, 10, foo); // calculate value at position 0.7
-*/
 #include "graph.h"
-//#define IMGUI_DEFINE_MATH_OPERATORS
-//#include "imgui_internal.h"
 
 #include <cmath>
 #include <algorithm>
@@ -59,25 +30,13 @@ namespace ImGui
           ImGui::Separator();
 
 
-
-            ImGui::SetNextWindowSize(ImVec2(350,560), ImGuiSetCond_FirstUseEver);
-            if (!ImGui::Begin("Example: Custom rendering", &animate))
-            {
-                ImGui::End();
-                return;
-            }
-
             // Tip: If you do a lot of custom rendering, you probably want to use your own geometrical types and benefit of overloaded operators, etc.
             // Define IM_VEC2_CLASS_EXTRA in imconfig.h to create implicit conversions between your types and ImVec2/ImVec4.
             // ImGui defines overloaded operators but they are internal to imgui.cpp and not exposed outside (to avoid messing with your types)
             // In this example we are not using the maths operators!
-            ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
-            // Primitives
-            ImGui::Text("Primitives");
-            static float sz = 36.0f;
-            static ImVec4 col = ImVec4(1.0f,1.0f,0.4f,1.0f);
-            ImGui::DragFloat("Size", &sz, 0.2f, 2.0f, 72.0f, "%.0f");
+/*
+        ImGui::DragFloat("Size", &sz, 0.2f, 2.0f, 72.0f, "%.0f");
             ImGui::ColorEdit3("Color", &col.x);
             {
                 const ImVec2 p = ImGui::GetCursorScreenPos();
@@ -155,7 +114,7 @@ namespace ImGui
                     points.pop_back();
             }
             ImGui::End();
-
+            */
     }
 
 
@@ -342,5 +301,7 @@ namespace ImGui
         RenderTextClipped(ImVec2(bb.Min.x, bb.Min.y + style.FramePadding.y), bb.Max, label, NULL, NULL, ImGuiAlign_Center);
         return modified;
     }
+
+
 
 };

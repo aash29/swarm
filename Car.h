@@ -61,13 +61,20 @@ class Car : public Test {
 public:
 
 
-	struct boxBot
-	{
+	struct boxBot {
+
+		struct magnet {
+			b2Vec2 pos;
+			bool active = false;
+		};
+
 		b2Body* box;
 		b2Body* wheel;
 		b2RevoluteJoint* spring;
 		b2Fixture* fix;
 		float buffer[100];
+		magnet magnets[4];
+
 	};
 
 
@@ -90,10 +97,24 @@ public:
 
 			b2PolygonShape chassis;
 			b2Vec2 vertices[4];
+
 			vertices[0].Set(-1.0f, -1.0f);
+			bb.magnets[0].pos.Set(-1.0f, -1.0f);
+			bb.magnets[0].active=false;
+
 			vertices[1].Set(-1.0f, 1.0f);
+			bb.magnets[1].pos.Set(-1.0f, 1.0f);
+			bb.magnets[1].active=true;
+
 			vertices[2].Set(1.0f, 1.0f);
+			bb.magnets[2].pos.Set(1.0f, 1.0f);
+			bb.magnets[2].active=true;
+
 			vertices[3].Set(1.0f, -1.0f);
+			bb.magnets[3].pos.Set(1.0f, -1.0f);
+			bb.magnets[3].active=true;
+
+
 			chassis.Set(vertices, 4);
 
 			b2CircleShape circle;
@@ -183,12 +204,15 @@ public:
 
 
 		bots = new std::vector<boxBot>;
-		bots->push_back(createBox(2.f,2.f));
+		bots->push_back(createBox(0.f,6.f));
 		bots->push_back(createBox(0.f,2.f));
 		//b1=createBox(0.f,2.f);
 
 		//b2=createBox(2.f,2.f);
 
+
+
+/*
 		b2RevoluteJointDef jd;
 		jd.collideConnected = true;
 
@@ -196,13 +220,39 @@ public:
 		jd.Initialize((*bots)[0].box, (*bots)[1].box, (*bots)[1].box->GetWorldCenter() + ((b2PolygonShape*)((*bots)[1].fix->GetShape()))->m_vertices[0]);
 
 
-        magnets = new std::vector<b2RevoluteJoint*>;
-		magnets->push_back((b2RevoluteJoint*)m_world->CreateJoint(&jd));
-
+        magnetJoints = new std::vector<b2RevoluteJoint*>;
+		magnetJoints->push_back((b2RevoluteJoint*)m_world->CreateJoint(&jd));
+*/
 
 		currentBot=&((*bots)[0]);
 	}
 
+
+	void updateJoints() {
+		for (int i = 0; i < bots->size(); i++) {
+			for (int j = i + 1; j < bots->size(); j++) {
+				for (int k = 0; k < 4; k++) {
+					for (int l = 0; l < 4; l++) {
+						(*bots)[i].magnets[k].pos = (*bots)[i].box->GetWorldPoint(
+								((b2PolygonShape *) ((*bots)[i].fix->GetShape()))->GetVertex(k));
+						(*bots)[j].magnets[l].pos = (*bots)[j].box->GetWorldPoint(
+								((b2PolygonShape *) ((*bots)[j].fix->GetShape()))->GetVertex(l));
+						//(*bots)[i].magnets[k].pos=(*bots)[i].box->GetWorldCenter() + ((b2PolygonShape*)((*bots)[i].fix->GetShape()))->GetVertex(k);
+						//(*bots)[j].magnets[l].pos=(*bots)[j].box->GetWorldCenter() + ((b2PolygonShape*)((*bots)[j].fix->GetShape()))->m_vertices[l];
+						if (((*bots)[i].magnets[k].active) && ((*bots)[j].magnets[l].active)) {
+							if (((*bots)[i].magnets[k].pos - (*bots)[j].magnets[l].pos).Length() < 0.1f) {
+								b2RevoluteJointDef jd;
+								jd.collideConnected = true;
+								jd.Initialize((*bots)[i].box, (*bots)[j].box, (*bots)[i].magnets[k].pos);
+								magnetJoints = new std::vector<b2RevoluteJoint *>;
+								magnetJoints->push_back((b2RevoluteJoint *) m_world->CreateJoint(&jd));
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 
 
 	void Keyboard(int key)
@@ -266,8 +316,8 @@ public:
 
             if (hit)
             {
-                m_world->DestroyJoint((*magnets)[0]);
-                (*magnets).pop_back();
+                m_world->DestroyJoint((*magnetJoints)[0]);
+                (*magnetJoints).pop_back();
 
                 return;
             }
@@ -290,6 +340,8 @@ public:
             }
             bb->buffer[IM_ARRAYSIZE(bb->buffer)-1] = bb->box->GetPosition().x;
         }
+		updateJoints();
+		DrawMagnetScheme();
 
 		Test::Step(settings);
 	}
@@ -323,6 +375,52 @@ public:
 
     }
 
+
+
+	void DrawMagnetScheme(){
+
+
+		ImGui::SetNextWindowSize(ImVec2(250,250), ImGuiSetCond_FirstUseEver);
+		if (!ImGui::Begin("Magnets"))
+		{
+
+			ImGui::End();
+			return;
+		}
+
+
+		ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+
+		ImVec2 canvas_pos = ImGui::GetCursorScreenPos();            // ImDrawList API uses screen coordinates!
+		ImVec2 canvas_size = ImGui::GetContentRegionAvail();        // Resize canvas to what's available
+
+		draw_list->AddRectFilledMultiColor(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(50,50,50), ImColor(50,50,60), ImColor(60,60,70), ImColor(50,50,60));
+		draw_list->AddRect(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y), ImColor(255,255,255));
+
+
+		static float sz = 136.0f;
+		static ImVec4 col = ImVec4(1.0f,1.0f,0.4f,1.0f);
+		const ImU32 col32 = ImColor(col);
+
+		const ImVec2 p = ImGui::GetCursorScreenPos();
+		float x = p.x + 40.0f, y = p.y + 40.0f;
+
+		draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x+sz, y+sz), col32);
+
+		ImGui::InvisibleButton("canvas", canvas_size);
+		if (ImGui::IsItemHovered()) {
+			if (ImGui::IsMouseClicked(0)) {
+				draw_list->AddRectFilled(ImVec2(ImGui::GetIO().MousePos.x-5,ImGui::GetIO().MousePos.y-5), ImVec2(ImGui::GetIO().MousePos.x+5,ImGui::GetIO().MousePos.y+5), ImColor(255,0,0));
+				currentBot->magnets[0].active = true;
+			}
+		}
+
+		ImGui::End();
+
+	}
+
+
 	static Test* Create()
 	{
 		return new Car;
@@ -336,7 +434,7 @@ public:
 	boxBot* currentBot;
 
 	float32 m_speed;
-	std::vector <b2RevoluteJoint*> *magnets;
+	std::vector <b2RevoluteJoint*> *magnetJoints;
 };
 
 #endif
