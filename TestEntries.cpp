@@ -22,7 +22,7 @@
 
 
 TestEntry g_testEntries[] =
-{
-	{"Car", Car::Create},
-	{NULL, NULL}
-};
+        {
+                {"Car", Car::Create},
+                {NULL, NULL}
+        };

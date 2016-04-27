@@ -2,38 +2,39 @@
 
 #include <cmath>
 #include <algorithm>
-namespace ImGui
-{
-    void GraphTestWindow(float* values,int values_count) {
-          static bool animate = true;
-          ImGui::Checkbox("Animate", &animate);
+
+namespace ImGui {
+    void GraphTestWindow(float *values, int values_count) {
+        static bool animate = true;
+        ImGui::Checkbox("Animate", &animate);
 
 
-            // Create a dummy array of contiguous float values to plot
-            // Tip: If your float aren't contiguous but part of a structure, you can pass a pointer to your first float and the sizeof() of your structure in the Stride parameter.
-            /*
-            static float values[90] = {0};
-            static int values_offset = 0;
-            if (animate) {
-                static float refresh_time = ImGui::GetTime(); // Create dummy data at fixed 60 hz rate for the demo
-                for (; ImGui::GetTime() > refresh_time + 1.0f / 60.0f; refresh_time += 1.0f / 60.0f) {
-                    static float phase = 0.0f;
-                    values[values_offset] = cosf(phase);
-                    values_offset = (values_offset + 1) % IM_ARRAYSIZE(values);
-                    phase += 0.10f * values_offset;
-                }
+        // Create a dummy array of contiguous float values to plot
+        // Tip: If your float aren't contiguous but part of a structure, you can pass a pointer to your first float and the sizeof() of your structure in the Stride parameter.
+        /*
+        static float values[90] = {0};
+        static int values_offset = 0;
+        if (animate) {
+            static float refresh_time = ImGui::GetTime(); // Create dummy data at fixed 60 hz rate for the demo
+            for (; ImGui::GetTime() > refresh_time + 1.0f / 60.0f; refresh_time += 1.0f / 60.0f) {
+                static float phase = 0.0f;
+                values[values_offset] = cosf(phase);
+                values_offset = (values_offset + 1) % IM_ARRAYSIZE(values);
+                phase += 0.10f * values_offset;
             }
+        }
 
-             */
-          ImGui::PlotLines("Lines", values, values_count, 0, "buffer", *(std::min_element(values, values+values_count)), *(std::max_element(values, values+values_count)), ImVec2(300, 200));
+         */
+        ImGui::PlotLines("Lines", values, values_count, 0, "buffer", *(std::min_element(values, values + values_count)),
+                         *(std::max_element(values, values + values_count)), ImVec2(300, 200));
 
-          ImGui::Separator();
+        ImGui::Separator();
 
 
-            // Tip: If you do a lot of custom rendering, you probably want to use your own geometrical types and benefit of overloaded operators, etc.
-            // Define IM_VEC2_CLASS_EXTRA in imconfig.h to create implicit conversions between your types and ImVec2/ImVec4.
-            // ImGui defines overloaded operators but they are internal to imgui.cpp and not exposed outside (to avoid messing with your types)
-            // In this example we are not using the maths operators!
+        // Tip: If you do a lot of custom rendering, you probably want to use your own geometrical types and benefit of overloaded operators, etc.
+        // Define IM_VEC2_CLASS_EXTRA in imconfig.h to create implicit conversions between your types and ImVec2/ImVec4.
+        // ImGui defines overloaded operators but they are internal to imgui.cpp and not exposed outside (to avoid messing with your types)
+        // In this example we are not using the maths operators!
 
 /*
         ImGui::DragFloat("Size", &sz, 0.2f, 2.0f, 72.0f, "%.0f");
@@ -118,9 +119,7 @@ namespace ImGui
     }
 
 
-
-    float CurveValue(float p, int maxpoints, const ImVec2 *points)
-    {
+    float CurveValue(float p, int maxpoints, const ImVec2 *points) {
         if (maxpoints < 2 || points == 0)
             return 0;
         if (p < 0) return points[0].y;
@@ -129,7 +128,7 @@ namespace ImGui
         while (left < maxpoints && points[left].x < p && points[left].x != -1) left++;
         if (left) left--;
 
-        if (left == maxpoints-1)
+        if (left == maxpoints - 1)
             return points[maxpoints - 1].y;
 
         float d = (p - points[left].x) / (points[left + 1].x - points[left].x);
@@ -137,15 +136,13 @@ namespace ImGui
         return points[left].y + (points[left + 1].y - points[left].y) * d;
     }
 
-    int Curve(const char *label, const ImVec2& size, int maxpoints, ImVec2 *points)
-    {
+    int Curve(const char *label, const ImVec2 &size, int maxpoints, ImVec2 *points) {
         int modified = 0;
         int i;
         if (maxpoints < 2 || points == 0)
             return 0;
 
-        if (points[0].x < 0)
-        {
+        if (points[0].x < 0) {
             points[0].x = 0;
             points[0].y = 0;
             points[1].x = 1;
@@ -153,9 +150,9 @@ namespace ImGui
             points[2].x = -1;
         }
 
-        ImGuiWindow* window = GetCurrentWindow();
-        ImGuiState& g = *GImGui;
-        const ImGuiStyle& style = g.Style;
+        ImGuiWindow *window = GetCurrentWindow();
+        ImGuiState &g = *GImGui;
+        const ImGuiStyle &style = g.Style;
         const ImGuiID id = window->GetID(label);
         if (window->SkipItems)
             return 0;
@@ -171,13 +168,10 @@ namespace ImGui
         while (max < maxpoints && points[max].x >= 0) max++;
 
         int kill = 0;
-        do
-        {
-            if (kill)
-            {
+        do {
+            if (kill) {
                 modified = 1;
-                for (i = kill + 1; i < max; i++)
-                {
+                for (i = kill + 1; i < max; i++) {
                     points[i - 1] = points[i];
                 }
                 max--;
@@ -185,10 +179,8 @@ namespace ImGui
                 kill = 0;
             }
 
-            for (i = 1; i < max - 1; i++)
-            {
-                if (std::abs(points[i].x - points[i - 1].x) < 1/128.f)
-                {
+            for (i = 1; i < max - 1; i++) {
+                if (std::abs(points[i].x - points[i - 1].x) < 1 / 128.f) {
                     kill = i;
                 }
             }
@@ -201,11 +193,9 @@ namespace ImGui
         float ht = bb.Max.y - bb.Min.y;
         float wd = bb.Max.x - bb.Min.x;
 
-        if (hovered)
-        {
+        if (hovered) {
             SetHoveredID(id);
-            if (g.IO.MouseDown[0])
-            {
+            if (g.IO.MouseDown[0]) {
                 modified = 1;
                 ImVec2 pos = (g.IO.MousePos - bb.Min) / (bb.Max - bb.Min);
                 pos.y = 1 - pos.y;
@@ -215,24 +205,20 @@ namespace ImGui
                 if (left) left--;
 
                 ImVec2 p = points[left] - pos;
-                float p1d = sqrt(p.x*p.x + p.y*p.y);
-                p = points[left+1] - pos;
-                float p2d = sqrt(p.x*p.x + p.y*p.y);
+                float p1d = sqrt(p.x * p.x + p.y * p.y);
+                p = points[left + 1] - pos;
+                float p2d = sqrt(p.x * p.x + p.y * p.y);
                 int sel = -1;
                 if (p1d < (1 / 16.0)) sel = left;
                 if (p2d < (1 / 16.0)) sel = left + 1;
 
-                if (sel != -1)
-                {
+                if (sel != -1) {
                     points[sel] = pos;
                 }
-                else
-                {
-                    if (max < maxpoints)
-                    {
+                else {
+                    if (max < maxpoints) {
                         max++;
-                        for (i = max; i > left; i--)
-                        {
+                        for (i = max; i > left; i--) {
                             points[i] = points[i - 1];
                         }
                         points[left + 1] = pos;
@@ -264,8 +250,7 @@ namespace ImGui
                 ImVec2(bb.Max.x, bb.Min.y + ht / 4 * 3),
                 GetColorU32(ImGuiCol_TextDisabled));
 
-        for (i = 0; i < 9; i++)
-        {
+        for (i = 0; i < 9; i++) {
             window->DrawList->AddLine(
                     ImVec2(bb.Min.x + (wd / 10) * (i + 1), bb.Min.y),
                     ImVec2(bb.Min.x + (wd / 10) * (i + 1), bb.Max.y),
@@ -273,8 +258,7 @@ namespace ImGui
         }
 
         // lines
-        for (i = 1; i < max; i++)
-        {
+        for (i = 1; i < max; i++) {
             ImVec2 a = points[i - 1];
             ImVec2 b = points[i];
             a.y = 1 - a.y;
@@ -284,11 +268,9 @@ namespace ImGui
             window->DrawList->AddLine(a, b, GetColorU32(ImGuiCol_PlotLines));
         }
 
-        if (hovered)
-        {
+        if (hovered) {
             // control points
-            for (i = 0; i < max; i++)
-            {
+            for (i = 0; i < max; i++) {
                 ImVec2 p = points[i];
                 p.y = 1 - p.y;
                 p = p * (bb.Max - bb.Min) + bb.Min;
@@ -298,10 +280,10 @@ namespace ImGui
             }
         }
 
-        RenderTextClipped(ImVec2(bb.Min.x, bb.Min.y + style.FramePadding.y), bb.Max, label, NULL, NULL, ImGuiAlign_Center);
+        RenderTextClipped(ImVec2(bb.Min.x, bb.Min.y + style.FramePadding.y), bb.Max, label, NULL, NULL,
+                          ImGuiAlign_Center);
         return modified;
     }
-
 
 
 };

@@ -28,26 +28,32 @@
 #define GREEN (0 | (255 << 8) | (0 << 16) | (255 << 24))
 #define BLUE (0 | (0 << 8) | (255 << 16) | (255 << 24))
 
-enum TextAlign
-{
-	TEXT_ALIGN_LEFT,
-	TEXT_ALIGN_CENTER,
-	TEXT_ALIGN_RIGHT,
+enum TextAlign {
+    TEXT_ALIGN_LEFT,
+    TEXT_ALIGN_CENTER,
+    TEXT_ALIGN_RIGHT,
 };
 
-inline unsigned int SetRGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
-{
-	return (r) | (g << 8) | (b << 16) | (a << 24);
+inline unsigned int SetRGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a) {
+    return (r) | (g << 8) | (b << 16) | (a << 24);
 }
 
-bool RenderGLInit(const char* fontpath);
+bool RenderGLInit(const char *fontpath);
+
 void RenderGLDestroy();
+
 void RenderGLFlush(int width, int height);
 
 void AddGfxCmdScissor(int x, int y, int w, int h);
+
 void AddGfxCmdRect(float x, float y, float w, float h, unsigned int color);
+
 void AddGfxCmdRoundedRect(float x, float y, float w, float h, float r, unsigned int color);
+
 void AddGfxCmdLine(float x0, float y0, float x1, float y1, float r, unsigned int color);
+
 void AddGfxCmdTriangle(int x, int y, int w, int h, int flags, unsigned int color);
-void AddGfxCmdText(float x, float y, TextAlign align, const char* text, unsigned int color);
-void AddGfxCmdText(int x, int y, TextAlign align, const char* text, unsigned int color);
+
+void AddGfxCmdText(float x, float y, TextAlign align, const char *text, unsigned int color);
+
+void AddGfxCmdText(int x, int y, TextAlign align, const char *text, unsigned int color);
