@@ -250,8 +250,21 @@ public:
                         (*bots)[j].magnets[l].pos = (*bots)[j].box->GetWorldPoint(
                                 ((b2PolygonShape *) ((*bots)[j].fix->GetShape()))->GetVertex(l));
 
+                        b2Vec2 dir = (*bots)[i].magnets[k].pos - (*bots)[j].magnets[l].pos;
+                        float magn = dir.Length();
+                        dir.Normalize();
+                        const b2Vec2 force = std::min(100/(magn*magn),100.f)*dir;
+                        const b2Vec2 pos1 = (*bots)[i].magnets[k].pos;
+                        const b2Vec2 pos2 = (*bots)[j].magnets[l].pos;
+
+                        //const b2Vec2 force2 = -std::max(1/magn,10.f)*dir;
+
                         if (((*bots)[i].magnets[k].active) && ((*bots)[j].magnets[l].active)) {
-                            if (((*bots)[i].magnets[k].pos - (*bots)[j].magnets[l].pos).Length() < 0.05f) {
+                            (*bots)[j].box->ApplyForce(force,pos2, true);
+                            (*bots)[i].box->ApplyForce(-force,pos1, true);
+
+                            /*
+                            if (((*bots)[i].magnets[k].pos - (*bots)[j].magnets[l].pos).Length() < 0.02f) {
 
                                 ImGui::Text("%d",id);
 
@@ -264,6 +277,7 @@ public:
                                     ImGui::Text("magnet links active: %d", magnetJoints->size());
                                 }
                             }
+                             */
                         }
                         else{
                             std::map<int,b2RevoluteJoint *>::iterator j1 = magnetJoints->find(id);
