@@ -170,14 +170,8 @@ static void sKeyCallback(GLFWwindow *, int key, int scancode, int action, int mo
                 test = entry->createFcn();
                 break;
 
-            case GLFW_KEY_SPACE:
-                // Launch a bomb.
-                if (test) {
-                    test->LaunchBomb();
-                }
-                break;
 
-            case GLFW_KEY_P:
+            case GLFW_KEY_SPACE:
                 // Pause
                 settings.pause = !settings.pause;
                 break;

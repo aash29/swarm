@@ -24,6 +24,8 @@
 #include <iostream>
 #include "imgui.h"
 #include "graph.h"
+#include "DebugDraw.h"
+
 
 class QueryCallback : public b2QueryCallback {
 public:
@@ -164,7 +166,7 @@ public:
 
     Car() {
 
-        m_speed = 50;
+        m_speed = 100;
 
         b2Body *ground = NULL;
         {
@@ -204,6 +206,7 @@ public:
         bots->push_back(createBox(0.f, 6.f, 1));
         bots->push_back(createBox(0.f, 2.f, 2));
         bots->push_back(createBox(-2.f, 2.f, 3));
+        bots->push_back(createBox(2.f, 2.f, 3));
         //b1=createBox(0.f,2.f);
 
         //b2=createBox(2.f,2.f);
@@ -253,7 +256,8 @@ public:
                         b2Vec2 dir = (*bots)[i].magnets[k].pos - (*bots)[j].magnets[l].pos;
                         float magn = dir.Length();
                         dir.Normalize();
-                        const b2Vec2 force = std::min(100/(magn*magn),100.f)*dir;
+                        //const b2Vec2 force = std::min(100/(magn*magn),100.f)*dir;
+                        const b2Vec2 force = 200.f*std::exp(-20.f*magn*magn)*dir;
                         const b2Vec2 pos1 = (*bots)[i].magnets[k].pos;
                         const b2Vec2 pos2 = (*bots)[j].magnets[l].pos;
 
@@ -263,9 +267,9 @@ public:
                             (*bots)[j].box->ApplyForce(force,pos2, true);
                             (*bots)[i].box->ApplyForce(-force,pos1, true);
 
-                            /*
-                            if (((*bots)[i].magnets[k].pos - (*bots)[j].magnets[l].pos).Length() < 0.02f) {
 
+                            if (((*bots)[i].magnets[k].pos - (*bots)[j].magnets[l].pos).Length() < 0.02f) {
+/*
                                 ImGui::Text("%d",id);
 
                                 b2RevoluteJointDef jd;
@@ -276,8 +280,12 @@ public:
                                     magnetJoints->insert(std::pair<int, b2RevoluteJoint *>(id, (b2RevoluteJoint *) m_world->CreateJoint(&jd)));
                                     ImGui::Text("magnet links active: %d", magnetJoints->size());
                                 }
+*/
+                                g_debugDraw.DrawPoint(pos1, 6, b2Color(0.f, 0.f, 1.f));
                             }
-                             */
+
+
+
                         }
                         else{
                             std::map<int,b2RevoluteJoint *>::iterator j1 = magnetJoints->find(id);
@@ -317,6 +325,7 @@ public:
 
 
     void MouseDown(const b2Vec2 &p) {
+        Test::MouseDown(p);
 
         m_mouseWorld = p;
 
@@ -339,31 +348,22 @@ public:
 
             //currentBot = body;
 
-            b2Transform transform;
+            //b2Transform transform;
 
-            transform.Set(p, 0.f);
+            //transform.Set(p, 0.f);
+        }
 
-            b2Vec2 point(currentBot->box->GetWorldCenter() +
-                         ((b2PolygonShape *) (currentBot->fix->GetShape()))->m_vertices[0]);
-
-            b2CircleShape s1;
-            s1.m_radius = 0.2f;
-
-            bool hit = s1.TestPoint(transform, point);
-            std::cout << hit;
-            /*
-            if (hit) {
-                m_world->DestroyJoint((*magnetJoints)[0]);
-                (*magnetJoints).pop_back();
-
-                return;
+        for (int i = 0; i < bots->size(); i++) {
+            for (int j = 0; j < 4; j++) {
+                if ((m_mouseWorld - (*bots)[i].magnets[j].pos).Length()<0.2f){
+                    (*bots)[i].magnets[j].active=!(*bots)[i].magnets[j].active;
+                }
             }
-             */
-
         }
 
 
     }
+
 
 
     void Step(Settings *settings) {
@@ -379,6 +379,7 @@ public:
         }
         updateJoints();
         DrawMagnetScheme();
+        DrawActiveMagnets();
 
         Test::Step(settings);
     }
@@ -409,6 +410,16 @@ public:
 
     }
 
+
+    void DrawActiveMagnets() {
+        for (int i = 0; i < bots->size(); i++) {
+            for (int j = 0; j < 4; j++) {
+                if ((*bots)[i].magnets[j].active) {
+                    g_debugDraw.DrawPoint((*bots)[i].magnets[j].pos, 5, b2Color(1.f, 0.f, 0.f));
+                }
+            }
+        }
+    }
 
     void DrawMagnetScheme() {
 
@@ -498,6 +509,8 @@ public:
 
 
         ImGui::End();
+
+
 
     }
 
