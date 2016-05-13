@@ -186,8 +186,10 @@ public:
 
             float32 hs[10] = {0.25f, 1.0f, 4.0f, 0.0f, 0.0f, -1.0f, -2.0f, -2.0f, -1.25f, 0.0f};
 
-            float32 x = 20.0f, y1 = 0.0f, dx = 5.0f;
+            float32 groundMap[10][2] = {{0.0f,0.0f}, {5.0f,0.0f}, {5.0f,3.0f}, {10.f,3.0f}, {15.0f,3.0f}, {20.f,3.0f},{20.f,6.0f}};
 
+            float32 x = 20.0f, y1 = 0.0f, dx = 5.0f;
+/*
             for (int32 i = 0; i < 10; ++i) {
                 float32 y2 = hs[i];
                 shape.Set(b2Vec2(x, y1), b2Vec2(x + dx, y2));
@@ -196,7 +198,20 @@ public:
                 x += dx;
             }
 
+*/          float x1 = groundMap[0][0];
+            y1 = groundMap[0][1];
+            for (int i = 1; i < 7; ++i) {
+                float32 x2 = groundMap[i][0];
+                float32 y2 = groundMap[i][1];
+                shape.Set(b2Vec2(x1, y1), b2Vec2(x2, y2));
+                ground->CreateFixture(&fd);
+                y1 = y2;
+                x1 = x2;
+            }
         }
+
+
+
 
         //m_car=createBox(0.f,2.f);
 
@@ -269,6 +284,19 @@ public:
 
 
                             if (((*bots)[i].magnets[k].pos - (*bots)[j].magnets[l].pos).Length() < 0.02f) {
+                                b2DistanceJointDef jd;
+
+
+                                jd.collideConnected = true;
+                                jd.length = 0.02f;
+                                jd.dampingRatio=0.5f;
+                                jd.Initialize((*bots)[i].box, (*bots)[j].box, (*bots)[i].magnets[k].pos,(*bots)[j].magnets[l].pos);
+                                std::map<int,b2RevoluteJoint *>::iterator j1 = magnetJoints->find(id);
+                                if (j1==magnetJoints->end()) {
+                                    magnetJoints->insert(std::pair<int, b2RevoluteJoint *>(id, (b2RevoluteJoint *) m_world->CreateJoint(&jd)));
+                                    ImGui::Text("magnet links active: %d", magnetJoints->size());
+                                }
+
 /*
                                 ImGui::Text("%d",id);
 
@@ -325,9 +353,15 @@ public:
 
 
     void MouseDown(const b2Vec2 &p) {
-        Test::MouseDown(p);
+        //Test::MouseDown(p);
 
         m_mouseWorld = p;
+
+
+        if (m_mouseJoint != NULL) {
+            return;
+        }
+
 
         // Make a small box.
         b2AABB aabb;
@@ -346,11 +380,14 @@ public:
 
             currentBot = body2Bot(body);
 
-            //currentBot = body;
+            b2MouseJointDef md;
+            md.bodyA = m_groundBody;
+            md.bodyB = body;
+            md.target = p;
+            md.maxForce = 1000.0f * body->GetMass();
+            m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
+            body->SetAwake(true);
 
-            //b2Transform transform;
-
-            //transform.Set(p, 0.f);
         }
 
         for (int i = 0; i < bots->size(); i++) {
