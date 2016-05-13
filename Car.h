@@ -380,13 +380,17 @@ public:
 
             currentBot = body2Bot(body);
 
-            b2MouseJointDef md;
-            md.bodyA = m_groundBody;
-            md.bodyB = body;
-            md.target = p;
-            md.maxForce = 1000.0f * body->GetMass();
-            m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
-            body->SetAwake(true);
+            if (body!=currentBot->wheel)
+            {
+
+                b2MouseJointDef md;
+                md.bodyA = m_groundBody;
+                md.bodyB = body;
+                md.target = p;
+                md.maxForce = 1000.0f * body->GetMass();
+                m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
+                body->SetAwake(true);
+            }
 
         }
 
