@@ -72,6 +72,7 @@ public:
         b2Fixture *fix;
         float buffer[100];
         magnet magnets[4];
+		float speed = 0.f;
 
     };
 
@@ -394,6 +395,14 @@ public:
 
         }
 
+		for (int j = 0; j < 4; j++) {
+			if ((m_mouseWorld - currentBot->magnets[j].pos).Length()<0.5f) {
+				currentBot->magnets[j].active = !currentBot->magnets[j].active;
+			}
+		}
+
+
+		/*
         for (int i = 0; i < bots->size(); i++) {
             for (int j = 0; j < 4; j++) {
                 if ((m_mouseWorld - (*bots)[i].magnets[j].pos).Length()<0.2f){
@@ -401,7 +410,7 @@ public:
                 }
             }
         }
-
+		*/
 
     }
 
@@ -409,7 +418,7 @@ public:
 
     void Step(Settings *settings) {
 
-        g_camera.m_center.x = (*bots)[0].box->GetPosition().x;
+        //g_camera.m_center.x = (*bots)[0].box->GetPosition().x;
 
 
         for (std::vector<boxBot>::iterator bb = bots->begin(); bb != bots->end(); bb++) {
@@ -464,6 +473,7 @@ public:
 
     void DrawMagnetScheme() {
 
+		g_debugDraw.DrawCircle(currentBot->box->GetWorldCenter(), 1.41f, b2Color(1.f, 1.f, 1.f));
 
         ImGui::SetNextWindowSize(ImVec2(250, 250), ImGuiSetCond_FirstUseEver);
         if (!ImGui::Begin("Magnets")) {
