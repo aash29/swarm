@@ -510,15 +510,15 @@ public:
 
                 if (mp.x<p.x+sz/2){
                     if (mp.y>p.y+sz/2){
-                        currentBot->magnets[3].active = not currentBot->magnets[3].active ;
+                        currentBot->magnets[3].active = !currentBot->magnets[3].active ;
                     } else{
-                        currentBot->magnets[2].active = not currentBot->magnets[2].active ;
+                        currentBot->magnets[2].active = !currentBot->magnets[2].active ;
                     }
                 } else {
                     if (mp.y > p.y + sz / 2) {
-                        currentBot->magnets[0].active = not currentBot->magnets[0].active;
+                        currentBot->magnets[0].active = !currentBot->magnets[0].active;
                     } else {
-                        currentBot->magnets[1].active = not currentBot->magnets[1].active;
+                        currentBot->magnets[1].active = !currentBot->magnets[1].active;
                     }
                 }
             }
