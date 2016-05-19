@@ -287,7 +287,7 @@ static void sSimulate() {
 
     test->DrawTitle(entry->name);
 
-    ((Car *) test)->plotGraphs();
+    //((Car *) test)->plotGraphs();
     glDisable(GL_DEPTH_TEST);
 
     if (testSelection != testIndex) {

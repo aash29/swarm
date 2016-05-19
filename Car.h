@@ -84,8 +84,17 @@ public:
             }
         }
         return 0;
+    };
 
 
+    void removeBotByID(int id) {
+        for (std::vector<boxBot>::iterator bb = bots->begin(); bb != bots->end(); bb++) {
+            if (bb->id==id) {
+                //bots->erase( std::remove( bots->begin(), bots->end(), contactBot ), bots->end() );
+                bots->erase(bb);
+                return;
+            }
+        }
     };
 
     boxBot createBox(float x, float y, int id) {
@@ -143,7 +152,8 @@ public:
         fd.shape = &circle;
         fd.density = 1.0f;
         fd.friction = 0.9f;
-        fd.filter.groupIndex = 2;
+        fd.filter.groupIndex = -2;
+        //fd.filter.categoryBits=0x0002;
 
 
         bd.position.Set(x, y);
@@ -187,7 +197,7 @@ public:
 
             float32 hs[10] = {0.25f, 1.0f, 4.0f, 0.0f, 0.0f, -1.0f, -2.0f, -2.0f, -1.25f, 0.0f};
 
-            float32 groundMap[10][2] = {{0.0f,0.0f}, {5.0f,0.0f}, {5.0f,3.0f}, {10.f,3.0f}, {15.0f,3.0f}, {20.f,3.0f},{20.f,6.0f}};
+            float32 groundMap[10][2] = {{0.0f,0.0f}, {5.0f,0.0f}, {5.0f,10.0f}, {10.f,10.0f}, {15.0f,10.0f}, {20.f,10.0f},{20.f,20.0f}};
 
             float32 x = 20.0f, y1 = 0.0f, dx = 5.0f;
 /*
@@ -213,6 +223,25 @@ public:
 
 
 
+        b2FixtureDef goalZoneDef;
+
+        b2PolygonShape goalZoneShape;
+        b2Vec2 vertices[4];
+
+        vertices[0].Set(10.0f, 3.0f);
+        vertices[1].Set(10.0f, 15.0f);
+        vertices[2].Set(20.0f, 15.0f);
+        vertices[3].Set(20.0f, 3.0f);
+
+        goalZoneShape.Set(vertices, 4);
+
+
+        goalZoneDef.shape = &goalZoneShape;
+        goalZoneDef.density = 1.0f;
+        goalZoneDef.filter.groupIndex = -2;
+        b2Fixture* goalZone = ground->CreateFixture(&goalZoneDef);
+        goalZone->SetSensor(true);
+
 
         //m_car=createBox(0.f,2.f);
 
@@ -227,7 +256,7 @@ public:
 
         //b2=createBox(2.f,2.f);
 
-
+        destroyedBots = new std::vector<boxBot*>;
 
 /*
 		b2RevoluteJointDef jd;
@@ -420,18 +449,23 @@ public:
 
         //g_camera.m_center.x = (*bots)[0].box->GetPosition().x;
 
-
         for (std::vector<boxBot>::iterator bb = bots->begin(); bb != bots->end(); bb++) {
             for (int i = 0; i < IM_ARRAYSIZE(bb->buffer); i++) {
                 bb->buffer[i] = bb->buffer[(i + 1) % IM_ARRAYSIZE(bb->buffer)];
             }
             bb->buffer[IM_ARRAYSIZE(bb->buffer) - 1] = bb->box->GetPosition().x;
         }
+
         updateJoints();
         DrawMagnetScheme();
         DrawActiveMagnets();
 
+        ImGui::Text("bots in goal: %d", victoryCount);
+
+
         Test::Step(settings);
+
+        Cleanup();
     }
 
 
@@ -565,6 +599,70 @@ public:
 
     }
 
+    void Cleanup()
+    {
+        for (auto it = destroyedBots->begin(); it != destroyedBots->end(); it++)
+        {
+
+            m_world->DestroyBody((*it)->box);
+            m_world->DestroyBody((*it)->wheel);
+            removeBotByID((*it)->id);
+        }
+
+        destroyedBots->clear();
+
+
+
+    }
+
+
+    void BeginContact(b2Contact* contact)
+    {
+
+        b2Body* targetBody = nullptr;
+        if (contact->GetFixtureA()->IsSensor())
+        {
+            targetBody  = contact->GetFixtureB()->GetBody();
+        }
+        else
+        if (contact->GetFixtureB()->IsSensor())
+        {
+            targetBody  = contact->GetFixtureA()->GetBody();
+        }
+
+        if (targetBody != nullptr){
+            boxBot* contactBot = body2Bot(targetBody);
+
+            victoryCount++;
+            //destroyedBots->push_back(contactBot);
+        }
+    }
+
+
+    void EndContact(b2Contact* contact)
+    {
+
+        b2Body* targetBody = nullptr;
+        if (contact->GetFixtureA()->IsSensor())
+        {
+            targetBody  = contact->GetFixtureB()->GetBody();
+        }
+
+
+        if (contact->GetFixtureB()->IsSensor())
+        {
+            targetBody  = contact->GetFixtureA()->GetBody();
+        }
+
+        if (targetBody != nullptr){
+            boxBot* contactBot = body2Bot(targetBody);
+
+            victoryCount--;
+        }
+    }
+
+
+
 
     static Test *Create() {
         return new Car;
@@ -572,11 +670,14 @@ public:
 
 
     std::vector<boxBot> *bots;
+    std::vector<boxBot*> *destroyedBots;
 
     boxBot *currentBot;
 
     float32 m_speed;
     std::map<int,b2RevoluteJoint *> *magnetJoints;
+
+    int victoryCount = 0;
 };
 
 #endif
