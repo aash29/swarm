@@ -241,7 +241,15 @@ static void sMouseButton(GLFWwindow *, int32 button, int32 action, int32 mods) {
             rightMouseDown = false;
         }
     }
-}
+    else if (button == GLFW_MOUSE_BUTTON_3) {
+        b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
+
+        if (action == GLFW_PRESS) {
+            test->MiddleMouseDown(pw);
+        }
+    }
+
+    }
 
 //
 static void sMouseMotion(GLFWwindow *, double xd, double yd) {

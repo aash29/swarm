@@ -97,6 +97,13 @@ public:
         }
     };
 
+    int getUID()
+    {
+        static int  i = -1;
+        i++;
+        return i;
+    }
+
     boxBot createBox(float x, float y, int id) {
         boxBot bb;
 
@@ -153,6 +160,7 @@ public:
         fd.density = 1.0f;
         fd.friction = 0.9f;
         fd.filter.groupIndex = -2;
+        //fd.filter.categoryBits=0x0002;
         //fd.filter.categoryBits=0x0002;
 
 
@@ -247,11 +255,12 @@ public:
 
 
         bots = new std::vector<boxBot>;
-        bots->push_back(createBox(0.f, 9.f, 0));
-        bots->push_back(createBox(0.f, 6.f, 1));
-        bots->push_back(createBox(0.f, 2.f, 2));
-        bots->push_back(createBox(-2.f, 2.f, 3));
-        bots->push_back(createBox(2.f, 2.f, 3));
+        bots->push_back(createBox(0.f, 9.f, getUID()));
+        bots->push_back(createBox(0.f, 6.f, getUID()));
+        bots->push_back(createBox(0.f, 2.f, getUID()));
+        bots->push_back(createBox(-2.f, 2.f, getUID()));
+        bots->push_back(createBox(2.f, 2.f, getUID()));
+        //bots->push_back(createBox(-10.f, 2.f, getUID()));
         //b1=createBox(0.f,2.f);
 
         //b2=createBox(2.f,2.f);
@@ -443,7 +452,11 @@ public:
 
     }
 
-
+    void MiddleMouseDown(const b2Vec2 &p)
+    {
+        bots->push_back(createBox(p.x, p.y, getUID()));
+        currentBot = &((*bots)[bots->size()-1]);
+    };
 
     void Step(Settings *settings) {
 
@@ -500,14 +513,19 @@ public:
             for (int j = 0; j < 4; j++) {
                 if ((*bots)[i].magnets[j].active) {
                     g_debugDraw.DrawPoint((*bots)[i].magnets[j].pos, 5, b2Color(1.f, 0.f, 0.f));
+                    g_debugDraw.DrawCircle((*bots)[i].magnets[j].pos, 0.5f, b2Color(1.f, 1.f, 0.5f));
+                }
+                else {
+                    g_debugDraw.DrawCircle((*bots)[i].magnets[j].pos, 0.5f, b2Color(0.f, 0.f, 0.0f));
                 }
             }
         }
     }
 
     void DrawMagnetScheme() {
-
-		g_debugDraw.DrawCircle(currentBot->box->GetWorldCenter(), 1.41f, b2Color(1.f, 1.f, 1.f));
+        if (currentBot!= nullptr){
+		    g_debugDraw.DrawCircle(currentBot->box->GetWorldCenter(), 1.41f, b2Color(1.f, 1.f, 1.f));
+        }
 
         ImGui::SetNextWindowSize(ImVec2(250, 250), ImGuiSetCond_FirstUseEver);
         if (!ImGui::Begin("Magnets")) {
@@ -672,7 +690,7 @@ public:
     std::vector<boxBot> *bots;
     std::vector<boxBot*> *destroyedBots;
 
-    boxBot *currentBot;
+    boxBot *currentBot = nullptr;
 
     float32 m_speed;
     std::map<int,b2RevoluteJoint *> *magnetJoints;

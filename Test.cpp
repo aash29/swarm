@@ -122,6 +122,11 @@ public:
     b2Fixture *m_fixture;
 };
 
+void Test::MiddleMouseDown(const b2Vec2 &p) {
+
+};
+
+
 void Test::MouseDown(const b2Vec2 &p) {
     m_mouseWorld = p;
 
