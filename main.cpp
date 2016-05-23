@@ -235,6 +235,8 @@ static void sMouseButton(GLFWwindow *, int32 button, int32 action, int32 mods) {
         if (action == GLFW_PRESS) {
             lastp = g_camera.ConvertScreenToWorld(ps);
             rightMouseDown = true;
+            b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
+            test->RightMouseDown(pw);
         }
 
         if (action == GLFW_RELEASE) {

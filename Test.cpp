@@ -122,6 +122,12 @@ public:
     b2Fixture *m_fixture;
 };
 
+
+void Test::RightMouseDown(const b2Vec2 &p) {
+
+};
+
+
 void Test::MiddleMouseDown(const b2Vec2 &p) {
 
 };

@@ -155,6 +155,8 @@ public:
 
     virtual void MouseDown(const b2Vec2 &p);
 
+    virtual void RightMouseDown(const b2Vec2 &p);
+
     virtual void MiddleMouseDown(const b2Vec2 &p);
 
     virtual void MouseUp(const b2Vec2 &p);
