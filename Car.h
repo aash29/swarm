@@ -21,6 +21,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 #include <iostream>
 #include "imgui.h"
 #include "graph.h"
@@ -274,7 +275,7 @@ public:
 
             float32 hs[10] = {0.25f, 1.0f, 4.0f, 0.0f, 0.0f, -1.0f, -2.0f, -2.0f, -1.25f, 0.0f};
 
-            float32 groundMap[10][2] = {{0.0f,0.0f}, {5.0f,0.0f}, {5.0f,10.0f}, {10.f,10.0f}, {15.0f,10.0f}, {20.f,10.0f},{20.f,20.0f}};
+            float32 groundMap[20][2] = {{-20.0f,20.0f}, {-20.0f,10.0f}, {-15.f,10.0f}, {-10.0f,10.0f}, {-5.f,10.0f},{-5.f,0.0f},{0.0f,0.0f}, {5.0f,0.0f}, {5.0f,10.0f}, {10.f,10.0f}, {15.0f,10.0f}, {20.f,10.0f},{20.f,20.0f}};
 
             float32 x = 20.0f, y1 = 0.0f, dx = 5.0f;
 /*
@@ -288,7 +289,7 @@ public:
 
 */          float x1 = groundMap[0][0];
             y1 = groundMap[0][1];
-            for (int i = 1; i < 7; ++i) {
+            for (int i = 1; i < 13; ++i) {
                 float32 x2 = groundMap[i][0];
                 float32 y2 = groundMap[i][1];
                 shape.Set(b2Vec2(x1, y1), b2Vec2(x2, y2));
@@ -339,6 +340,7 @@ public:
 
         magnetJoints = new std::map<int,jointType *>;
         currentBot = nullptr;
+        selectedBots = new std::set<boxBot>;
         //SetCurrent(&((*bots)[0]));
 
     }
@@ -438,15 +440,20 @@ public:
     void Keyboard(int key) {
         switch (key) {
             case GLFW_KEY_A:
-                currentBot->spring->SetMotorSpeed(-m_speed);
+
+                std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot b1) {b1.spring->SetMotorSpeed(-m_speed);});
+                if (currentBot!= nullptr)
+                    currentBot->spring->SetMotorSpeed(-m_speed);
                 break;
 
             case GLFW_KEY_D:
-                currentBot->spring->SetMotorSpeed(m_speed);
+                if (currentBot!= nullptr)
+                    currentBot->spring->SetMotorSpeed(m_speed);
                 break;
 
             case GLFW_KEY_S:
-                currentBot->spring->SetMotorSpeed(0.0f);
+                if (currentBot!= nullptr)
+                    currentBot->spring->SetMotorSpeed(0.0f);
                 break;
 
         }
@@ -504,11 +511,13 @@ public:
 
         }
 
-		for (int j = 0; j < 4; j++) {
-			if ((m_mouseWorld - currentBot->magnets[j].pos).Length()<0.5f) {
-				currentBot->magnets[j].active = !currentBot->magnets[j].active;
-			}
-		}
+        if (currentBot!= nullptr){
+            for (int j = 0; j < 4; j++) {
+                if ((m_mouseWorld - currentBot->magnets[j].pos).Length()<0.5f) {
+                    currentBot->magnets[j].active = !currentBot->magnets[j].active;
+                }
+            }
+        }
 
 
 		/*
@@ -770,6 +779,8 @@ public:
     std::vector<boxBot*> *destroyedBots;
 
     boxBot *currentBot = nullptr;
+
+    std::set <boxBot> *selectedBots;
 
     float32 m_speed;
     std::map<int,jointType *> *magnetJoints;
