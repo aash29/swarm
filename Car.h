@@ -21,7 +21,7 @@
 
 #include <vector>
 #include <map>
-#include <set>
+#include <unordered_set>
 #include <iostream>
 #include "imgui.h"
 #include "graph.h"
@@ -93,6 +93,32 @@ public:
     };
 
 
+    boxBot* SelectBot(b2Vec2 p) {
+        b2AABB aabb;
+        b2Vec2 d;
+        d.Set(0.001f, 0.001f);
+        aabb.lowerBound = p - d;
+        aabb.upperBound = p + d;
+
+        // Query the world for overlapping shapes.
+        QueryCallback callback(p);
+        m_world->QueryAABB(&callback, aabb);
+
+        if (callback.m_fixture) {
+
+            b2Body *body = callback.m_fixture->GetBody();
+
+            boxBot *b1 = body2Bot(body);
+
+            return b1;
+        }
+
+        return nullptr;
+
+    }
+
+
+
     void removeBotByID(int id) {
         for (std::vector<boxBot>::iterator bb = bots->begin(); bb != bots->end(); bb++) {
             if (bb->id==id) {
@@ -152,6 +178,7 @@ public:
         bd.type = b2_dynamicBody;
         bd.position.Set(x, y);
 
+
         bb.box = m_world->CreateBody(&bd);
 
         b2FixtureDef fd0;
@@ -179,7 +206,7 @@ public:
 
 
         b2RevoluteJointDef jd;
-        b2Vec2 axis(0.0f, 1.0f);
+        b2Vec2 axis(0.0f, 0.0f);
 
         jd.Initialize(bb.box, bb.wheel, bb.wheel->GetPosition());
         jd.motorSpeed = 0.0f;
@@ -249,7 +276,8 @@ public:
         if (currentBot!= nullptr) {
             OnUnsetCurrent(currentBot);
         }
-        currentBot = bb;
+        //currentBot = bb;
+        selectedBots->insert(bb);
         OnSetCurrent(currentBot);
     }
 
@@ -317,8 +345,11 @@ public:
         goalZoneDef.shape = &goalZoneShape;
         goalZoneDef.density = 1.0f;
         goalZoneDef.filter.groupIndex = -2;
+        goalZoneDef.filter.categoryBits = 2; // goal zone
+
         b2Fixture* goalZone = ground->CreateFixture(&goalZoneDef);
         goalZone->SetSensor(true);
+//        goalZone->SetUserData()
 
 
         //m_car=createBox(0.f,2.f);
@@ -340,7 +371,7 @@ public:
 
         magnetJoints = new std::map<int,jointType *>;
         currentBot = nullptr;
-        selectedBots = new std::set<boxBot>;
+        selectedBots = new std::unordered_set<boxBot*>;
         //SetCurrent(&((*bots)[0]));
 
     }
@@ -441,25 +472,36 @@ public:
         switch (key) {
             case GLFW_KEY_A:
 
-                std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot b1) {b1.spring->SetMotorSpeed(-m_speed);});
-                if (currentBot!= nullptr)
-                    currentBot->spring->SetMotorSpeed(-m_speed);
+                std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {b1->spring->SetMotorSpeed(-m_speed);});
+                //if (currentBot!= nullptr)
+                //    currentBot->spring->SetMotorSpeed(-m_speed);
                 break;
 
             case GLFW_KEY_D:
-                if (currentBot!= nullptr)
-                    currentBot->spring->SetMotorSpeed(m_speed);
+                //if (currentBot!= nullptr)
+                //    currentBot->spring->SetMotorSpeed(m_speed);
+                std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {b1->spring->SetMotorSpeed(m_speed);});
                 break;
 
             case GLFW_KEY_S:
-                if (currentBot!= nullptr)
-                    currentBot->spring->SetMotorSpeed(0.0f);
+                //if (currentBot!= nullptr)
+                //    currentBot->spring->SetMotorSpeed(0.0f);
+
+                std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {b1->spring->SetMotorSpeed(0.f);});
                 break;
 
         }
     }
 
     //boxBot* body2bot(b2)
+
+
+    void EnterKeyDown(){
+        std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {
+            for (int i=0; i<4; i++)
+                b1->magnets[i].active=!b1->magnets[i].active;});
+    };
+
 
 
     void MouseDown(const b2Vec2 &p) {
@@ -472,7 +514,6 @@ public:
             return;
         }
 
-
         // Make a small box.
         b2AABB aabb;
         b2Vec2 d;
@@ -483,17 +524,15 @@ public:
         // Query the world for overlapping shapes.
         QueryCallback callback(p);
         m_world->QueryAABB(&callback, aabb);
+        boxBot* b1 = SelectBot(p);
 
-        if (callback.m_fixture) {
-
+        if (b1!= nullptr) {
             b2Body *body = callback.m_fixture->GetBody();
-
-            boxBot* b1 = body2Bot(body);
-            if (b1==currentBot) {
+            if (selectedBots->find(b1)!=selectedBots->end()) {
 
                 //currentBot = body2Bot(body);
 
-                if (body != currentBot->wheel) {
+                if (body != b1->wheel) {
 
                     b2MouseJointDef md;
                     md.bodyA = m_groundBody;
@@ -502,10 +541,20 @@ public:
                     md.maxForce = 1000.0f * body->GetMass();
                     m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
                     body->SetAwake(true);
+                } else
+                {
+                    b2MouseJointDef md;
+                    md.bodyA = m_groundBody;
+                    md.bodyB = b1->box;
+                    md.target = p;
+                    md.maxForce = 1000.0f * body->GetMass();
+                    m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
+                    body->SetAwake(true);
                 }
             }
             else
             {
+              selectedBots->clear();
               SetCurrent(b1);
             }
 
@@ -533,9 +582,18 @@ public:
     }
 
 
+    void ShiftMouseDown(const b2Vec2 &p) {
+        m_mouseWorld = p;
+        boxBot* bb= SelectBot(p);
+        if (bb!= nullptr)
+            selectedBots->insert(bb);
+
+    }
+
     void RightMouseDown(const b2Vec2 &p)
     {
         SetCurrent(nullptr);
+        selectedBots->clear();
     };
 
     void MiddleMouseDown(const b2Vec2 &p)
@@ -610,8 +668,10 @@ public:
 
     void DrawMagnetScheme() {
         if (currentBot!= nullptr){
-		    g_debugDraw.DrawCircle(currentBot->box->GetWorldCenter(), 1.41f, b2Color(1.f, 1.f, 1.f));
+		    g_debugDraw.DrawSolidCircle(currentBot->box->GetWorldCenter(), 1.41f, b2Vec2(1.f,0.f), b2Color(1.f, 1.f, 1.f, 0.5f));
         }
+
+        std::for_each(selectedBots->begin(),selectedBots->end(),[this](boxBot* b1){g_debugDraw.DrawSolidCircle(b1->box->GetWorldCenter(), 1.41f, b2Vec2(1.f,0.f), b2Color(1.f, 1.f, 1.f, 0.5f));});
 
         ImGui::SetNextWindowSize(ImVec2(250, 250), ImGuiSetCond_FirstUseEver);
         if (!ImGui::Begin("Magnets")) {
@@ -726,12 +786,12 @@ public:
     {
 
         b2Body* targetBody = nullptr;
-        if (contact->GetFixtureA()->IsSensor())
+        if (contact->GetFixtureA()->GetFilterData().categoryBits==2)
         {
             targetBody  = contact->GetFixtureB()->GetBody();
         }
         else
-        if (contact->GetFixtureB()->IsSensor())
+        if (contact->GetFixtureA()->GetFilterData().categoryBits==2)
         {
             targetBody  = contact->GetFixtureA()->GetBody();
         }
@@ -744,18 +804,17 @@ public:
         }
     }
 
-
     void EndContact(b2Contact* contact)
     {
 
         b2Body* targetBody = nullptr;
-        if (contact->GetFixtureA()->IsSensor())
+        if (contact->GetFixtureA()->GetFilterData().categoryBits==2)
         {
             targetBody  = contact->GetFixtureB()->GetBody();
         }
 
 
-        if (contact->GetFixtureB()->IsSensor())
+        if (contact->GetFixtureA()->GetFilterData().categoryBits==2)
         {
             targetBody  = contact->GetFixtureA()->GetBody();
         }
@@ -768,8 +827,6 @@ public:
     }
 
 
-
-
     static Test *Create() {
         return new Car;
     }
@@ -780,7 +837,7 @@ public:
 
     boxBot *currentBot = nullptr;
 
-    std::set <boxBot> *selectedBots;
+    std::unordered_set <boxBot*> *selectedBots;
 
     float32 m_speed;
     std::map<int,jointType *> *magnetJoints;

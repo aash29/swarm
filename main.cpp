@@ -99,6 +99,13 @@ static void sResizeWindow(GLFWwindow *, int width, int height) {
 static void sKeyCallback(GLFWwindow *, int key, int scancode, int action, int mods) {
     if (action == GLFW_PRESS) {
         switch (key) {
+
+
+            case GLFW_KEY_ENTER:
+                // Quit
+                test->EnterKeyDown();
+                break;
+
             case GLFW_KEY_ESCAPE:
                 // Quit
                 glfwSetWindowShouldClose(mainWindow, GL_TRUE);
