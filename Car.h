@@ -278,7 +278,7 @@ public:
         }
         //currentBot = bb;
         selectedBots->insert(bb);
-        OnSetCurrent(currentBot);
+        OnSetCurrent(bb);
     }
 
     Car() {
@@ -524,11 +524,11 @@ public:
         // Query the world for overlapping shapes.
         QueryCallback callback(p);
         m_world->QueryAABB(&callback, aabb);
-        boxBot* b1 = SelectBot(p);
+        boxBot *b1 = SelectBot(p);
 
-        if (b1!= nullptr) {
+        if (b1 != nullptr) {
             b2Body *body = callback.m_fixture->GetBody();
-            if (selectedBots->find(b1)!=selectedBots->end()) {
+            if (selectedBots->find(b1) != selectedBots->end()) {
 
                 //currentBot = body2Bot(body);
 
@@ -541,8 +541,7 @@ public:
                     md.maxForce = 1000.0f * body->GetMass();
                     m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
                     body->SetAwake(true);
-                } else
-                {
+                } else {
                     b2MouseJointDef md;
                     md.bodyA = m_groundBody;
                     md.bodyB = b1->box;
@@ -552,21 +551,22 @@ public:
                     body->SetAwake(true);
                 }
             }
-            else
-            {
-              selectedBots->clear();
-              SetCurrent(b1);
+            else {
+                selectedBots->clear();
+                SetCurrent(b1);
             }
 
         }
 
-        if (currentBot!= nullptr){
+        std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot *b1) {
             for (int j = 0; j < 4; j++) {
-                if ((m_mouseWorld - currentBot->magnets[j].pos).Length()<0.5f) {
-                    currentBot->magnets[j].active = !currentBot->magnets[j].active;
+                if ((m_mouseWorld - b1->magnets[j].pos).Length() < 0.5f) {
+                    b1->magnets[j].active = !b1->magnets[j].active;
                 }
             }
-        }
+        });
+
+
 
 
 		/*
@@ -599,7 +599,8 @@ public:
     void MiddleMouseDown(const b2Vec2 &p)
     {
         bots->push_back(createBox(p.x, p.y, getUID()));
-        SetCurrent(&((*bots)[bots->size()-1]));
+
+        //SetCurrent(&((*bots)[bots->size()-1]));
     };
 
     void Step(Settings *settings) {
@@ -667,11 +668,11 @@ public:
     }
 
     void DrawMagnetScheme() {
-        if (currentBot!= nullptr){
-		    g_debugDraw.DrawSolidCircle(currentBot->box->GetWorldCenter(), 1.41f, b2Vec2(1.f,0.f), b2Color(1.f, 1.f, 1.f, 0.5f));
-        }
 
-        std::for_each(selectedBots->begin(),selectedBots->end(),[this](boxBot* b1){g_debugDraw.DrawSolidCircle(b1->box->GetWorldCenter(), 1.41f, b2Vec2(1.f,0.f), b2Color(1.f, 1.f, 1.f, 0.5f));});
+        std::for_each(selectedBots->begin(),selectedBots->end(),[this](boxBot* b1){
+           // b2Vec2* p1 = new b2Vec2(b1->box->GetWorldCenter());
+            g_debugDraw.DrawSolidCircle(b1->box->GetWorldCenter(), 1.41f, b2Vec2(1.f,0.f), b2Color(1.f, 1.f, 1.f, 0.5f));
+        });
 
         ImGui::SetNextWindowSize(ImVec2(250, 250), ImGuiSetCond_FirstUseEver);
         if (!ImGui::Begin("Magnets")) {
