@@ -32,22 +32,23 @@
 #define jointType b2DistanceJoint
 
 
-class QueryCallback : public b2QueryCallback {
+class MultiQueryCallback : public b2QueryCallback {
 public:
-    QueryCallback(const b2Vec2 &point) {
+    MultiQueryCallback(const b2Vec2 &point) {
         m_point = point;
-        m_fixture = NULL;
+        m_fixtures = new std::unordered_set<b2Fixture*>;
     }
 
-    bool ReportFixture(b2Fixture *fixture) {
+    bool ReportFixture(b2Fixture* fixture) {
+
         b2Body *body = fixture->GetBody();
         if (body->GetType() == b2_dynamicBody) {
             bool inside = fixture->TestPoint(m_point);
             if (inside) {
-                m_fixture = fixture;
+                m_fixtures->insert(fixture);
 
                 // We are done, terminate the query.
-                return false;
+                //return false;
             }
         }
 
@@ -56,7 +57,7 @@ public:
     }
 
     b2Vec2 m_point;
-    b2Fixture *m_fixture;
+    std::unordered_set<b2Fixture*>  *m_fixtures;
 };
 
 // This is a fun demo that shows off the wheel joint
@@ -80,16 +81,18 @@ public:
         magnet magnets[4];
 		float speed = 0.f;
 
+        boxBot() {}
+
     };
 
 
-    boxBot *body2Bot(b2Body *b1) {
-        for (std::vector<boxBot>::iterator bb = bots->begin(); bb != bots->end(); bb++) {
-            if ((b1 == bb->box) || (b1 == bb->wheel)) {
-                return &(*bb);
+    boxBot* body2Bot(b2Body *b1) {
+        for (std::vector<boxBot*>::iterator bb = bots->begin(); bb != bots->end(); bb++) {
+            if ((b1 == (*bb)->box) || (b1 == (*bb)->wheel)) {
+                return (*bb);
             }
         }
-        return 0;
+        return nullptr;
     };
 
 
@@ -101,27 +104,26 @@ public:
         aabb.upperBound = p + d;
 
         // Query the world for overlapping shapes.
-        QueryCallback callback(p);
+        MultiQueryCallback callback(p);
         m_world->QueryAABB(&callback, aabb);
 
-        if (callback.m_fixture) {
 
-            b2Body *body = callback.m_fixture->GetBody();
+        boxBot *b1 = nullptr;
+        std::for_each(callback.m_fixtures->begin(),callback.m_fixtures->end(), [this,&b1] (b2Fixture* f1) {
+            b2Body *body = f1->GetBody();
+            b1 = body2Bot(body);
 
-            boxBot *b1 = body2Bot(body);
+        });
 
-            return b1;
-        }
-
-        return nullptr;
+        return b1;
 
     }
 
 
 
     void removeBotByID(int id) {
-        for (std::vector<boxBot>::iterator bb = bots->begin(); bb != bots->end(); bb++) {
-            if (bb->id==id) {
+        for (std::vector<boxBot*>::iterator bb = bots->begin(); bb != bots->end(); bb++) {
+            if ((*bb)->id==id) {
                 //bots->erase( std::remove( bots->begin(), bots->end(), contactBot ), bots->end() );
                 bots->erase(bb);
                 return;
@@ -136,10 +138,12 @@ public:
         return i;
     }
 
-    boxBot createBox(float x, float y, int id) {
-        boxBot bb;
+    boxBot* createBox(float x, float y, int id) {
+        boxBot* bb;
 
-        bb.id=id;
+        bb = new boxBot();
+
+        bb->id=id;
 
         b2PolygonShape chassis;
         b2Vec2 vertices[4];
@@ -147,23 +151,23 @@ public:
 
 
         vertices[0].Set(1.0f, -1.0f);
-        bb.magnets[0].pos.Set(1.0f, -1.0f);
-        bb.magnets[0].active = false;
+        bb->magnets[0].pos.Set(1.0f, -1.0f);
+        bb->magnets[0].active = false;
 
 
 
         vertices[1].Set(1.0f, 1.0f);
-        bb.magnets[1].pos.Set(1.0f, 1.0f);
-        bb.magnets[1].active = false;
+        bb->magnets[1].pos.Set(1.0f, 1.0f);
+        bb->magnets[1].active = false;
 
         vertices[2].Set(-1.0f, 1.0f);
-        bb.magnets[2].pos.Set(-1.0f, 1.0f);
-        bb.magnets[2].active = false;
+        bb->magnets[2].pos.Set(-1.0f, 1.0f);
+        bb->magnets[2].active = false;
 
 
         vertices[3].Set(-1.0f, -1.0f);
-        bb.magnets[3].pos.Set(-1.0f, -1.0f);
-        bb.magnets[3].active = false;
+        bb->magnets[3].pos.Set(-1.0f, -1.0f);
+        bb->magnets[3].active = false;
 
 
 
@@ -179,7 +183,7 @@ public:
         bd.position.Set(x, y);
 
 
-        bb.box = m_world->CreateBody(&bd);
+        bb->box = m_world->CreateBody(&bd);
 
         b2FixtureDef fd0;
         fd0.shape = &chassis;
@@ -188,7 +192,7 @@ public:
         fd0.filter.groupIndex = 2;
 
 
-        bb.fix = bb.box->CreateFixture(&fd0);
+        bb->fix = bb->box->CreateFixture(&fd0);
 
 
         b2FixtureDef fd;
@@ -201,14 +205,14 @@ public:
 
 
         bd.position.Set(x, y);
-        bb.wheel = m_world->CreateBody(&bd);
-        bb.wheel->CreateFixture(&fd);
+        bb->wheel = m_world->CreateBody(&bd);
+        bb->wheel->CreateFixture(&fd);
 
 
         b2RevoluteJointDef jd;
         b2Vec2 axis(0.0f, 0.0f);
 
-        jd.Initialize(bb.box, bb.wheel, bb.wheel->GetPosition());
+        jd.Initialize(bb->box, bb->wheel, bb->wheel->GetPosition());
         jd.motorSpeed = 0.0f;
         jd.maxMotorTorque = 600.0f;
         jd.enableMotor = true;
@@ -216,7 +220,49 @@ public:
 
 
 
-        bb.spring = (b2RevoluteJoint *) m_world->CreateJoint(&jd);
+        bb->spring = (b2RevoluteJoint *) m_world->CreateJoint(&jd);
+
+
+
+        b2PolygonShape magFix;
+
+
+        b2FixtureDef mfd2;
+        mfd2.shape = &magFix;
+        mfd2.density = 0.001f;
+        mfd2.friction = 0.9f;
+        mfd2.filter.categoryBits=3;   // magnet triggers
+
+
+        magFix.SetAsBox(0.5f,0.5f,b2Vec2(0.5f,-0.5f),0.f);
+        bb->magnets[0].fix = bb->box->CreateFixture(&mfd2);
+        bb->magnets[0].fix->SetSensor(true);
+        int* i0 = new int;
+        *i0 =0;
+        bb->magnets[0].fix->SetUserData(i0);
+
+        magFix.SetAsBox(0.5f,0.5f,b2Vec2(0.5f,0.5f),0.f);
+        bb->magnets[1].fix = bb->box->CreateFixture(&mfd2);
+        bb->magnets[1].fix->SetSensor(true);
+        int* i1 = new int;
+        *i1 =1;
+        bb->magnets[1].fix->SetUserData(i1);
+
+        magFix.SetAsBox(0.5f,0.5f,b2Vec2(-0.5f,0.5f),0.f);
+        bb->magnets[2].fix = bb->box->CreateFixture(&mfd2);
+        bb->magnets[2].fix->SetSensor(true);
+        int* i2 = new int;
+        *i2 =2;
+        bb->magnets[2].fix->SetUserData(i2);
+
+        magFix.SetAsBox(0.5f,0.5f,b2Vec2(-0.5f,-0.5f),0.f);
+        bb->magnets[3].fix = bb->box->CreateFixture(&mfd2);
+        bb->magnets[3].fix->SetSensor(true);
+        int* i3 = new int;
+        *i3 =3;
+        bb->magnets[3].fix->SetUserData(i3);
+
+
 
         return bb;
     };
@@ -227,35 +273,50 @@ public:
     void OnSetCurrent(boxBot* bb) {
 
         if (bb!= nullptr) {
-            b2CircleShape magCircle;
-            magCircle.m_radius = 0.5f;
+
+            b2PolygonShape magFix;
 
 
-            b2FixtureDef mfd;
-            mfd.shape = &magCircle;
-            mfd.density = 1.0f;
-            mfd.friction = 0.9f;
+            b2FixtureDef mfd2;
+            mfd2.shape = &magFix;
+            mfd2.density = 0.001f;
+            mfd2.friction = 0.9f;
+            mfd2.filter.categoryBits=3;   // magnet triggers
 
 
-            magCircle.m_p = ((b2PolygonShape *) (bb->fix->GetShape()))->GetVertex(0);
-
-            bb->magnets[0].fix = bb->box->CreateFixture(&mfd);
+            magFix.SetAsBox(0.5f,0.5f,b2Vec2(0.5f,-0.5f),0.f);
+            bb->magnets[0].fix = bb->box->CreateFixture(&mfd2);
             bb->magnets[0].fix->SetSensor(true);
+            int* i0 = new int;
+            *i0 =0;
+            bb->magnets[0].fix->SetUserData(i0);
 
-            magCircle.m_p = ((b2PolygonShape *) (bb->fix->GetShape()))->GetVertex(1);
-
-            bb->magnets[1].fix = bb->box->CreateFixture(&mfd);
+            magFix.SetAsBox(0.5f,0.5f,b2Vec2(0.5f,0.5f),0.f);
+            bb->magnets[1].fix = bb->box->CreateFixture(&mfd2);
             bb->magnets[1].fix->SetSensor(true);
+            int* i1 = new int;
+            *i1 =1;
+            bb->magnets[1].fix->SetUserData(i1);
 
-            magCircle.m_p = ((b2PolygonShape *) (bb->fix->GetShape()))->GetVertex(2);
-
-            bb->magnets[2].fix = bb->box->CreateFixture(&mfd);
+            magFix.SetAsBox(0.5f,0.5f,b2Vec2(-0.5f,0.5f),0.f);
+            bb->magnets[2].fix = bb->box->CreateFixture(&mfd2);
             bb->magnets[2].fix->SetSensor(true);
+            int* i2 = new int;
+            *i2 =2;
+            bb->magnets[2].fix->SetUserData(i2);
 
-            magCircle.m_p = ((b2PolygonShape *) (bb->fix->GetShape()))->GetVertex(3);
-
-            bb->magnets[3].fix = bb->box->CreateFixture(&mfd);
+            magFix.SetAsBox(0.5f,0.5f,b2Vec2(-0.5f,-0.5f),0.f);
+            bb->magnets[3].fix = bb->box->CreateFixture(&mfd2);
             bb->magnets[3].fix->SetSensor(true);
+            int* i3 = new int;
+            *i3 =3;
+            bb->magnets[3].fix->SetUserData(i3);
+
+
+
+
+
+
         }
     };
 
@@ -274,11 +335,11 @@ public:
     void SetCurrent (boxBot* bb)
     {
         if (currentBot!= nullptr) {
-            OnUnsetCurrent(currentBot);
+            //OnUnsetCurrent(currentBot);
         }
         //currentBot = bb;
         selectedBots->insert(bb);
-        OnSetCurrent(bb);
+        //OnSetCurrent(bb);
     }
 
     Car() {
@@ -355,7 +416,7 @@ public:
         //m_car=createBox(0.f,2.f);
 
 
-        bots = new std::vector<boxBot>;
+        bots = new std::vector<boxBot*>;
         bots->push_back(createBox(0.f, 9.f, getUID()));
         bots->push_back(createBox(0.f, 6.f, getUID()));
         bots->push_back(createBox(0.f, 2.f, getUID()));
@@ -394,27 +455,27 @@ public:
                         short int h2 =  j << 8 | l;
                         id = symmHash(h1,h2);
 
-                        b2Vec2 p1 = ((b2PolygonShape *) ((*bots)[i].fix->GetShape()))->GetVertex(k);
-                        b2Vec2 p2 = ((b2PolygonShape *) ((*bots)[j].fix->GetShape()))->GetVertex(l);
-                        (*bots)[i].magnets[k].pos = (*bots)[i].box->GetWorldPoint(p1);
-                        (*bots)[j].magnets[l].pos = (*bots)[j].box->GetWorldPoint(p2);
+                        b2Vec2 p1 = ((b2PolygonShape *) ((*bots)[i]->fix->GetShape()))->GetVertex(k);
+                        b2Vec2 p2 = ((b2PolygonShape *) ((*bots)[j]->fix->GetShape()))->GetVertex(l);
+                        (*bots)[i]->magnets[k].pos = (*bots)[i]->box->GetWorldPoint(p1);
+                        (*bots)[j]->magnets[l].pos = (*bots)[j]->box->GetWorldPoint(p2);
 
-                        b2Vec2 dir = (*bots)[i].magnets[k].pos - (*bots)[j].magnets[l].pos;
+                        b2Vec2 dir = (*bots)[i]->magnets[k].pos - (*bots)[j]->magnets[l].pos;
                         float magn = dir.Length();
                         dir.Normalize();
                         //const b2Vec2 force = std::min(100/(magn*magn),100.f)*dir;
                         const b2Vec2 force = 200.f*std::exp(-20.f*magn*magn)*dir;
-                        const b2Vec2 pos1 = (*bots)[i].magnets[k].pos;
-                        const b2Vec2 pos2 = (*bots)[j].magnets[l].pos;
+                        const b2Vec2 pos1 = (*bots)[i]->magnets[k].pos;
+                        const b2Vec2 pos2 = (*bots)[j]->magnets[l].pos;
 
                         //const b2Vec2 force2 = -std::max(1/magn,10.f)*dir;
 
-                        if (((*bots)[i].magnets[k].active) && ((*bots)[j].magnets[l].active)) {
-                            (*bots)[j].box->ApplyForce(force,pos2, true);
-                            (*bots)[i].box->ApplyForce(-force,pos1, true);
+                        if (((*bots)[i]->magnets[k].active) && ((*bots)[j]->magnets[l].active)) {
+                            (*bots)[j]->box->ApplyForce(force,pos2, true);
+                            (*bots)[i]->box->ApplyForce(-force,pos1, true);
 
 
-                            if (((*bots)[i].magnets[k].pos - (*bots)[j].magnets[l].pos).Length() < 0.2f) {
+                            if (((*bots)[i]->magnets[k].pos - (*bots)[j]->magnets[l].pos).Length() < 0.2f) {
                                 b2DistanceJointDef jd;
 
 
@@ -422,8 +483,8 @@ public:
                                 jd.length = 0.01f;
                                 jd.frequencyHz = 20.0f;
                                 jd.dampingRatio=0.5f;
-                                jd.bodyA = (*bots)[i].box;
-                                jd.bodyB = (*bots)[j].box;
+                                jd.bodyA = (*bots)[i]->box;
+                                jd.bodyB = (*bots)[j]->box;
                                 jd.localAnchorA.Set(p1.x,p1.y);
                                 jd.localAnchorB.Set(p2.x,p2.y);
                                 //jd.Initialize((*bots)[i].box, (*bots)[j].box, (*bots)[i].magnets[k].pos,(*bots)[j].magnets[l].pos);
@@ -514,7 +575,9 @@ public:
             return;
         }
 
-        // Make a small box.
+
+        boxBot *b1 = SelectBot(p);
+
         b2AABB aabb;
         b2Vec2 d;
         d.Set(0.001f, 0.001f);
@@ -522,62 +585,58 @@ public:
         aabb.upperBound = p + d;
 
         // Query the world for overlapping shapes.
-        QueryCallback callback(p);
+        MultiQueryCallback callback(p);
         m_world->QueryAABB(&callback, aabb);
-        boxBot *b1 = SelectBot(p);
+        std::for_each(callback.m_fixtures->begin(),callback.m_fixtures->end(), [this,b1,p] (b2Fixture* f1) {
 
-        if (b1 != nullptr) {
-            b2Body *body = callback.m_fixture->GetBody();
-            if (selectedBots->find(b1) != selectedBots->end()) {
+            if (b1 != nullptr) {
 
-                //currentBot = body2Bot(body);
 
-                if (body != b1->wheel) {
 
-                    b2MouseJointDef md;
-                    md.bodyA = m_groundBody;
-                    md.bodyB = body;
-                    md.target = p;
-                    md.maxForce = 1000.0f * body->GetMass();
-                    m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
-                    body->SetAwake(true);
-                } else {
-                    b2MouseJointDef md;
-                    md.bodyA = m_groundBody;
-                    md.bodyB = b1->box;
-                    md.target = p;
-                    md.maxForce = 1000.0f * body->GetMass();
-                    m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
-                    body->SetAwake(true);
+                b2Body *body = f1->GetBody();
+
+                if (selectedBots->find(b1) != selectedBots->end()) {
+
+                    if (f1->GetFilterData().categoryBits==3){
+                        int* udInt = (int*)f1->GetUserData();
+                        b1->magnets[*udInt].active= !b1->magnets[*udInt].active;
+                    }
+                    selectedBots->clear();
+                    SetCurrent(b1);
+                    //currentBot = body2Bot(body);
+                    /*
+                    if (body != b1->wheel) {
+
+                        b2MouseJointDef md;
+                        md.bodyA = m_groundBody;
+                        md.bodyB = body;
+                        md.target = p;
+                        md.maxForce = 1000.0f * body->GetMass();
+                        m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
+                        body->SetAwake(true);
+                    }
+
+                    else {
+                        b2MouseJointDef md;
+                        md.bodyA = m_groundBody;
+                        md.bodyB = b1->box;
+                        md.target = p;
+                        md.maxForce = 1000.0f * body->GetMass();
+                        m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
+                        body->SetAwake(true);
+                    }
+                    */
                 }
-            }
-            else {
-                selectedBots->clear();
-                SetCurrent(b1);
-            }
-
-        }
-
-        std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot *b1) {
-            for (int j = 0; j < 4; j++) {
-                if ((m_mouseWorld - b1->magnets[j].pos).Length() < 0.5f) {
-                    b1->magnets[j].active = !b1->magnets[j].active;
+                else {
+                    selectedBots->clear();
+                    SetCurrent(b1);
                 }
+
             }
+
         });
 
 
-
-
-		/*
-        for (int i = 0; i < bots->size(); i++) {
-            for (int j = 0; j < 4; j++) {
-                if ((m_mouseWorld - (*bots)[i].magnets[j].pos).Length()<0.2f){
-                    (*bots)[i].magnets[j].active=!(*bots)[i].magnets[j].active;
-                }
-            }
-        }
-		*/
 
     }
 
@@ -607,11 +666,11 @@ public:
 
         //g_camera.m_center.x = (*bots)[0].box->GetPosition().x;
 
-        for (std::vector<boxBot>::iterator bb = bots->begin(); bb != bots->end(); bb++) {
-            for (int i = 0; i < IM_ARRAYSIZE(bb->buffer); i++) {
-                bb->buffer[i] = bb->buffer[(i + 1) % IM_ARRAYSIZE(bb->buffer)];
+        for (std::vector<boxBot*>::iterator bb = bots->begin(); bb != bots->end(); bb++) {
+            for (int i = 0; i < IM_ARRAYSIZE((*bb)->buffer); i++) {
+                (*bb)->buffer[i] = (*bb)->buffer[(i + 1) % IM_ARRAYSIZE((*bb)->buffer)];
             }
-            bb->buffer[IM_ARRAYSIZE(bb->buffer) - 1] = bb->box->GetPosition().x;
+            (*bb)->buffer[IM_ARRAYSIZE((*bb)->buffer) - 1] = (*bb)->box->GetPosition().x;
         }
 
         updateJoints();
@@ -646,7 +705,7 @@ public:
         }
 
         bool f = true;
-        ImGui::GraphTestWindow((*bots)[0].buffer, 100);
+        ImGui::GraphTestWindow((*bots)[0]->buffer, 100);
 
         ImGui::Curve("Curve", ImVec2(600, 200), 10, foo);
 
@@ -656,8 +715,8 @@ public:
     void DrawActiveMagnets() {
         for (int i = 0; i < bots->size(); i++) {
             for (int j = 0; j < 4; j++) {
-                if ((*bots)[i].magnets[j].active) {
-                    g_debugDraw.DrawPoint((*bots)[i].magnets[j].pos, 5, b2Color(1.f, 0.f, 0.f));
+                if ((*bots)[i]->magnets[j].active) {
+                    g_debugDraw.DrawPoint((*bots)[i]->magnets[j].pos, 5, b2Color(1.f, 0.f, 0.f));
                     //g_debugDraw.DrawCircle((*bots)[i].magnets[j].pos, 0.5f, b2Color(1.f, 1.f, 0.5f));
                 }
                 else {
@@ -671,7 +730,8 @@ public:
 
         std::for_each(selectedBots->begin(),selectedBots->end(),[this](boxBot* b1){
            // b2Vec2* p1 = new b2Vec2(b1->box->GetWorldCenter());
-            g_debugDraw.DrawSolidCircle(b1->box->GetWorldCenter(), 1.41f, b2Vec2(1.f,0.f), b2Color(1.f, 1.f, 1.f, 0.5f));
+            b2Vec2 p1 = b2Vec2(b1->box->GetWorldCenter().x,b1->box->GetWorldCenter().y);
+            g_debugDraw.DrawSolidCircle(p1, 1.41f, b2Vec2(1.f,0.f), b2Color(1.f, 1.f, 1.f, 0.5f));
         });
 
         ImGui::SetNextWindowSize(ImVec2(250, 250), ImGuiSetCond_FirstUseEver);
@@ -833,7 +893,7 @@ public:
     }
 
 
-    std::vector<boxBot> *bots;
+    std::vector<boxBot*> *bots;
     std::vector<boxBot*> *destroyedBots;
 
     boxBot *currentBot = nullptr;
