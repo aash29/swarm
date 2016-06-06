@@ -109,7 +109,7 @@ public:
 
 
         boxBot *b1 = nullptr;
-        std::for_each(callback.m_fixtures->begin(),callback.m_fixtures->end(), [this,&b1] (b2Fixture* f1) {
+        std::for_each(callback.m_fixtures->begin(),callback.m_fixtures->end(), [this, &b1] (b2Fixture* f1) {
             b2Body *body = f1->GetBody();
             b1 = body2Bot(body);
 
@@ -231,7 +231,7 @@ public:
         mfd2.shape = &magFix;
         mfd2.density = 0.001f;
         mfd2.friction = 0.9f;
-        mfd2.filter.categoryBits=3;   // magnet triggers
+        mfd2.filter.categoryBits=0x0003;   // magnet triggers
 
 
         magFix.SetAsBox(0.5f,0.5f,b2Vec2(0.5f,-0.5f),0.f);
@@ -406,7 +406,7 @@ public:
         goalZoneDef.shape = &goalZoneShape;
         goalZoneDef.density = 1.0f;
         goalZoneDef.filter.groupIndex = -2;
-        goalZoneDef.filter.categoryBits = 2; // goal zone
+        goalZoneDef.filter.categoryBits = 0x0002; // goal zone
 
         b2Fixture* goalZone = ground->CreateFixture(&goalZoneDef);
         goalZone->SetSensor(true);
@@ -506,6 +506,8 @@ public:
                                     ImGui::Text("magnet links active: %d", magnetJoints->size());
                                 }
 */
+
+
                                 g_debugDraw.DrawPoint(pos1, 6, b2Color(0.f, 0.f, 1.f));
                             }
 
@@ -577,68 +579,61 @@ public:
 
 
         boxBot *b1 = SelectBot(p);
+        if (b1 != nullptr) {
+            if (selectedBots->find(b1) != selectedBots->end()) {
 
-        b2AABB aabb;
-        b2Vec2 d;
-        d.Set(0.001f, 0.001f);
-        aabb.lowerBound = p - d;
-        aabb.upperBound = p + d;
+                b2AABB aabb;
+                b2Vec2 d;
+                d.Set(0.001f, 0.001f);
+                aabb.lowerBound = p - d;
+                aabb.upperBound = p + d;
 
-        // Query the world for overlapping shapes.
-        MultiQueryCallback callback(p);
-        m_world->QueryAABB(&callback, aabb);
-        std::for_each(callback.m_fixtures->begin(),callback.m_fixtures->end(), [this,b1,p] (b2Fixture* f1) {
-
-            if (b1 != nullptr) {
-
+                // Query the world for overlapping shapes.
+                MultiQueryCallback callback(p);
+                m_world->QueryAABB(&callback, aabb);
+                std::for_each(callback.m_fixtures->begin(), callback.m_fixtures->end(), [this, b1, p](b2Fixture *f1) {
+                    b2Body *body = f1->GetBody();
 
 
-                b2Body *body = f1->GetBody();
 
-                if (selectedBots->find(b1) != selectedBots->end()) {
+                        if (f1->GetFilterData().categoryBits == 0x0003) {
+                            int *udInt = (int *) f1->GetUserData();
+                            b1->magnets[*udInt].active = !b1->magnets[*udInt].active;
+                        }
+                        selectedBots->clear();
+                        SetCurrent(b1);
+                        //currentBot = body2Bot(body);
+                        /*
+                        if (body != b1->wheel) {
 
-                    if (f1->GetFilterData().categoryBits==3){
-                        int* udInt = (int*)f1->GetUserData();
-                        b1->magnets[*udInt].active= !b1->magnets[*udInt].active;
-                    }
-                    selectedBots->clear();
-                    SetCurrent(b1);
-                    //currentBot = body2Bot(body);
-                    /*
-                    if (body != b1->wheel) {
+                            b2MouseJointDef md;
+                            md.bodyA = m_groundBody;
+                            md.bodyB = body;
+                            md.target = p;
+                            md.maxForce = 1000.0f * body->GetMass();
+                            m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
+                            body->SetAwake(true);
+                        }
 
-                        b2MouseJointDef md;
-                        md.bodyA = m_groundBody;
-                        md.bodyB = body;
-                        md.target = p;
-                        md.maxForce = 1000.0f * body->GetMass();
-                        m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
-                        body->SetAwake(true);
-                    }
-
-                    else {
-                        b2MouseJointDef md;
-                        md.bodyA = m_groundBody;
-                        md.bodyB = b1->box;
-                        md.target = p;
-                        md.maxForce = 1000.0f * body->GetMass();
-                        m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
-                        body->SetAwake(true);
-                    }
-                    */
-                }
-                else {
-                    selectedBots->clear();
-                    SetCurrent(b1);
-                }
-
+                        else {
+                            b2MouseJointDef md;
+                            md.bodyA = m_groundBody;
+                            md.bodyB = b1->box;
+                            md.target = p;
+                            md.maxForce = 1000.0f * body->GetMass();
+                            m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
+                            body->SetAwake(true);
+                        }
+                        */
+                    });
             }
+            else {
+                selectedBots->clear();
+                SetCurrent(b1);
+            }
+        }
 
-        });
-
-
-
-    }
+        }
 
 
     void ShiftMouseDown(const b2Vec2 &p) {
@@ -716,7 +711,19 @@ public:
         for (int i = 0; i < bots->size(); i++) {
             for (int j = 0; j < 4; j++) {
                 if ((*bots)[i]->magnets[j].active) {
-                    g_debugDraw.DrawPoint((*bots)[i]->magnets[j].pos, 5, b2Color(1.f, 0.f, 0.f));
+                   // g_debugDraw.DrawPoint((*bots)[i]->magnets[j].pos, 5, b2Color(1.f, 0.f, 0.f));
+                    const b2Transform& xf = (*bots)[i]->box->GetTransform();
+                    b2PolygonShape* poly = (b2PolygonShape*)(*bots)[i]->magnets[j].fix->GetShape();
+                    int32 vertexCount = poly->m_count;
+                    b2Assert(vertexCount <= b2_maxPolygonVertices);
+                    b2Vec2 vertices[b2_maxPolygonVertices];
+
+                    for (int32 i = 0; i < vertexCount; ++i)
+                    {
+                        vertices[i] = b2Mul(xf, poly->m_vertices[i]);
+                    }
+                    b2Color color(0.2f, 0.95f, 0.6f);
+                    g_debugDraw.DrawSolidPolygon(vertices, vertexCount, color);
                     //g_debugDraw.DrawCircle((*bots)[i].magnets[j].pos, 0.5f, b2Color(1.f, 1.f, 0.5f));
                 }
                 else {
@@ -731,7 +738,7 @@ public:
         std::for_each(selectedBots->begin(),selectedBots->end(),[this](boxBot* b1){
            // b2Vec2* p1 = new b2Vec2(b1->box->GetWorldCenter());
             b2Vec2 p1 = b2Vec2(b1->box->GetWorldCenter().x,b1->box->GetWorldCenter().y);
-            g_debugDraw.DrawSolidCircle(p1, 1.41f, b2Vec2(1.f,0.f), b2Color(1.f, 1.f, 1.f, 0.5f));
+            g_debugDraw.DrawCircle(p1, 1.41f, b2Color(1.f, 1.f, 1.f, 0.5f));
         });
 
         ImGui::SetNextWindowSize(ImVec2(250, 250), ImGuiSetCond_FirstUseEver);
