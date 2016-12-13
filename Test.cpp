@@ -136,7 +136,9 @@ void Test::EnterKeyDown() {
 
 };
 
+void Test::handleFastInput(float dir) {
 
+};
 
 
 void Test::MouseDown(const b2Vec2 &p) {

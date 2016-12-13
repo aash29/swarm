@@ -1,20 +1,3 @@
-/*
-* Copyright (c) 2006-2011 Erin Catto http://www.box2d.org
-*
-* This software is provided 'as-is', without any express or implied
-* warranty.  In no event will the authors be held liable for any damages
-* arising from the use of this software.
-* Permission is granted to anyone to use this software for any purpose,
-* including commercial applications, and to alter it and redistribute it
-* freely, subject to the following restrictions:
-* 1. The origin of this software must not be misrepresented; you must not
-* claim that you wrote the original software. If you use this software
-* in a product, an acknowledgment in the product documentation would be
-* appreciated but is not required.
-* 2. Altered source versions must be plainly marked as such, and must not be
-* misrepresented as being the original software.
-* 3. This notice may not be removed or altered from any source distribution.
-*/
 
 #ifndef CAR_H
 #define CAR_H
@@ -26,6 +9,7 @@
 #include "imgui.h"
 #include "graph.h"
 #include "DebugDraw.h"
+#include "coinsLog.h"
 
 
 
@@ -36,6 +20,7 @@ class MultiQueryCallback : public b2QueryCallback {
 public:
     MultiQueryCallback(const b2Vec2 &point) {
         m_point = point;
+
         m_fixtures = new std::unordered_set<b2Fixture*>;
     }
 
@@ -64,7 +49,6 @@ public:
 class Car : public Test {
 public:
 
-
     struct boxBot {
 
         struct magnet {
@@ -80,14 +64,17 @@ public:
         float buffer[100];
         magnet magnets[4];
 		float speed = 0.f;
-
+        float torque = 0.f;
+        float torqueChange = 0.f;
         boxBot() {}
 
     };
 
+    std::vector<boxBot*> bots = std::vector<boxBot*>();
+
 
     boxBot* body2Bot(b2Body *b1) {
-        for (std::vector<boxBot*>::iterator bb = bots->begin(); bb != bots->end(); bb++) {
+        for (std::vector<boxBot*>::iterator bb = bots.begin(); bb != bots.end(); bb++) {
             if ((b1 == (*bb)->box) || (b1 == (*bb)->wheel)) {
                 return (*bb);
             }
@@ -122,10 +109,10 @@ public:
 
 
     void removeBotByID(int id) {
-        for (std::vector<boxBot*>::iterator bb = bots->begin(); bb != bots->end(); bb++) {
+        for (std::vector<boxBot*>::iterator bb = bots.begin(); bb != bots.end(); bb++) {
             if ((*bb)->id==id) {
                 //bots->erase( std::remove( bots->begin(), bots->end(), contactBot ), bots->end() );
-                bots->erase(bb);
+                bots.erase(bb);
                 return;
             }
         }
@@ -416,12 +403,12 @@ public:
         //m_car=createBox(0.f,2.f);
 
 
-        bots = new std::vector<boxBot*>;
-        bots->push_back(createBox(0.f, 9.f, getUID()));
-        bots->push_back(createBox(0.f, 6.f, getUID()));
-        bots->push_back(createBox(0.f, 2.f, getUID()));
-        bots->push_back(createBox(-2.f, 2.f, getUID()));
-        bots->push_back(createBox(2.f, 2.f, getUID()));
+        //bots = new std::vector<boxBot*>;
+        bots.push_back(createBox(0.f, 9.f, getUID()));
+        bots.push_back(createBox(0.f, 6.f, getUID()));
+        bots.push_back(createBox(0.f, 2.f, getUID()));
+        bots.push_back(createBox(-2.f, 2.f, getUID()));
+        bots.push_back(createBox(2.f, 2.f, getUID()));
         //bots->push_back(createBox(-10.f, 2.f, getUID()));
         //b1=createBox(0.f,2.f);
 
@@ -446,8 +433,8 @@ public:
 
     void updateJoints() {
         int id = 0;
-        for (int i = 0; i < bots->size(); i++) {
-            for (int j = i + 1; j < bots->size(); j++) {
+        for (int i = 0; i < bots.size(); i++) {
+            for (int j = i + 1; j < bots.size(); j++) {
                 for (int k = 0; k < 4; k++) {
                     for (int l = 0; l < 4; l++) {
 
@@ -455,27 +442,27 @@ public:
                         short int h2 =  j << 8 | l;
                         id = symmHash(h1,h2);
 
-                        b2Vec2 p1 = ((b2PolygonShape *) ((*bots)[i]->fix->GetShape()))->GetVertex(k);
-                        b2Vec2 p2 = ((b2PolygonShape *) ((*bots)[j]->fix->GetShape()))->GetVertex(l);
-                        (*bots)[i]->magnets[k].pos = (*bots)[i]->box->GetWorldPoint(p1);
-                        (*bots)[j]->magnets[l].pos = (*bots)[j]->box->GetWorldPoint(p2);
+                        b2Vec2 p1 = ((b2PolygonShape *) ((bots)[i]->fix->GetShape()))->GetVertex(k);
+                        b2Vec2 p2 = ((b2PolygonShape *) ((bots)[j]->fix->GetShape()))->GetVertex(l);
+                        (bots)[i]->magnets[k].pos = (bots)[i]->box->GetWorldPoint(p1);
+                        (bots)[j]->magnets[l].pos = (bots)[j]->box->GetWorldPoint(p2);
 
-                        b2Vec2 dir = (*bots)[i]->magnets[k].pos - (*bots)[j]->magnets[l].pos;
+                        b2Vec2 dir = (bots)[i]->magnets[k].pos - (bots)[j]->magnets[l].pos;
                         float magn = dir.Length();
                         dir.Normalize();
                         //const b2Vec2 force = std::min(100/(magn*magn),100.f)*dir;
                         const b2Vec2 force = 200.f*std::exp(-20.f*magn*magn)*dir;
-                        const b2Vec2 pos1 = (*bots)[i]->magnets[k].pos;
-                        const b2Vec2 pos2 = (*bots)[j]->magnets[l].pos;
+                        const b2Vec2 pos1 = (bots)[i]->magnets[k].pos;
+                        const b2Vec2 pos2 = (bots)[j]->magnets[l].pos;
 
                         //const b2Vec2 force2 = -std::max(1/magn,10.f)*dir;
 
-                        if (((*bots)[i]->magnets[k].active) && ((*bots)[j]->magnets[l].active)) {
-                            (*bots)[j]->box->ApplyForce(force,pos2, true);
-                            (*bots)[i]->box->ApplyForce(-force,pos1, true);
+                        if (((bots)[i]->magnets[k].active) && ((bots)[j]->magnets[l].active)) {
+                            (bots)[j]->box->ApplyForce(force,pos2, true);
+                            (bots)[i]->box->ApplyForce(-force,pos1, true);
 
 
-                            if (((*bots)[i]->magnets[k].pos - (*bots)[j]->magnets[l].pos).Length() < 0.2f) {
+                            if (((bots)[i]->magnets[k].pos - (bots)[j]->magnets[l].pos).Length() < 0.2f) {
                                 b2DistanceJointDef jd;
 
 
@@ -483,8 +470,8 @@ public:
                                 jd.length = 0.01f;
                                 jd.frequencyHz = 20.0f;
                                 jd.dampingRatio=0.5f;
-                                jd.bodyA = (*bots)[i]->box;
-                                jd.bodyB = (*bots)[j]->box;
+                                jd.bodyA = (bots)[i]->box;
+                                jd.bodyB = (bots)[j]->box;
                                 jd.localAnchorA.Set(p1.x,p1.y);
                                 jd.localAnchorB.Set(p2.x,p2.y);
                                 //jd.Initialize((*bots)[i].box, (*bots)[j].box, (*bots)[i].magnets[k].pos,(*bots)[j].magnets[l].pos);
@@ -534,8 +521,11 @@ public:
     void Keyboard(int key) {
         switch (key) {
             case GLFW_KEY_A:
-
-                std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {b1->spring->SetMotorSpeed(-m_speed);});
+                std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {
+                    b1->torqueChange = 5.f;
+                }
+                );
+                //std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {b1->spring->SetMotorSpeed(-m_speed);});
                 //if (currentBot!= nullptr)
                 //    currentBot->spring->SetMotorSpeed(-m_speed);
                 break;
@@ -543,18 +533,49 @@ public:
             case GLFW_KEY_D:
                 //if (currentBot!= nullptr)
                 //    currentBot->spring->SetMotorSpeed(m_speed);
-                std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {b1->spring->SetMotorSpeed(m_speed);});
+                //std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {b1->spring->SetMotorSpeed(m_speed);});
+                //std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {b1->torque=b1->torque-0.5f;});
+                std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {
+                                  b1->torqueChange = -5.f;
+                              }
+                );
+
+
                 break;
 
             case GLFW_KEY_S:
                 //if (currentBot!= nullptr)
                 //    currentBot->spring->SetMotorSpeed(0.0f);
 
-                std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {b1->spring->SetMotorSpeed(0.f);});
+                //std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {b1->spring->SetMotorSpeed(0.f);});
+                std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {
+                                  b1->torque = 0.f;
+                              }
+                );
                 break;
 
         }
     }
+
+     void KeyboardUp(int key) {
+         switch (key) {
+             case GLFW_KEY_A:
+                 std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot *b1) {
+                                   b1->torqueChange = 0.f;
+                               }
+                 );
+                 break;
+
+             case GLFW_KEY_D:
+                 std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot *b1) {
+                                   b1->torqueChange = 0.f;
+                               }
+                 );
+                 break;
+         }
+
+     }
+
 
     //boxBot* body2bot(b2)
 
@@ -564,6 +585,12 @@ public:
             for (int i=0; i<4; i++)
                 b1->magnets[i].active=!b1->magnets[i].active;});
     };
+
+
+    void handleFastInput(float dir) {
+        bots[0]->torque+=1.f*dir;
+    };
+
 
 
 
@@ -652,7 +679,7 @@ public:
 
     void MiddleMouseDown(const b2Vec2 &p)
     {
-        bots->push_back(createBox(p.x, p.y, getUID()));
+        bots.push_back(createBox(p.x, p.y, getUID()));
 
         //SetCurrent(&((*bots)[bots->size()-1]));
     };
@@ -660,19 +687,55 @@ public:
     void Step(Settings *settings) {
 
         //g_camera.m_center.x = (*bots)[0].box->GetPosition().x;
+        /*
+        for (std::vector<boxBot*>::iterator bb = bots.begin(); bb != bots.end(); bb++) {
 
-        for (std::vector<boxBot*>::iterator bb = bots->begin(); bb != bots->end(); bb++) {
             for (int i = 0; i < IM_ARRAYSIZE((*bb)->buffer); i++) {
                 (*bb)->buffer[i] = (*bb)->buffer[(i + 1) % IM_ARRAYSIZE((*bb)->buffer)];
             }
             (*bb)->buffer[IM_ARRAYSIZE((*bb)->buffer) - 1] = (*bb)->box->GetPosition().x;
+
+            (*bb)->box->ApplyTorque((*bb)->torque,true);
+
         }
+         */
 
         updateJoints();
         DrawMagnetScheme();
+
+        ImGui::SliderFloat("Torque", &(bots[0]->torque), -150.0f, 150.0f);
+
+
+
         DrawActiveMagnets();
 
         ImGui::Text("bots in goal: %d", victoryCount);
+
+        coinsLog.Draw("Log");
+
+
+
+        //coinsLog.AddLog("left, %g \n",bots[0]->torque );
+
+        for (int i = 0; i < bots.size(); i++) {
+
+            /*
+            bots[i]->torque=bots[i]->torque+bots[i]->torqueChange;
+            if (bots[i]->torque>100.f)
+            {
+                bots[i]->torque=100.f;
+            }
+
+            if (bots[i]->torque<-100.f)
+            {
+                bots[i]->torque=-100.f;
+            }
+            */
+
+            bots[i]->box->ApplyTorque(bots[i]->torque,true);
+        };
+
+
 
 
         Test::Step(settings);
@@ -700,7 +763,7 @@ public:
         }
 
         bool f = true;
-        ImGui::GraphTestWindow((*bots)[0]->buffer, 100);
+        ImGui::GraphTestWindow((bots)[0]->buffer, 100);
 
         ImGui::Curve("Curve", ImVec2(600, 200), 10, foo);
 
@@ -708,12 +771,12 @@ public:
 
 
     void DrawActiveMagnets() {
-        for (int i = 0; i < bots->size(); i++) {
+        for (int i = 0; i < bots.size(); i++) {
             for (int j = 0; j < 4; j++) {
-                if ((*bots)[i]->magnets[j].active) {
+                if ((bots)[i]->magnets[j].active) {
                    // g_debugDraw.DrawPoint((*bots)[i]->magnets[j].pos, 5, b2Color(1.f, 0.f, 0.f));
-                    const b2Transform& xf = (*bots)[i]->box->GetTransform();
-                    b2PolygonShape* poly = (b2PolygonShape*)(*bots)[i]->magnets[j].fix->GetShape();
+                    const b2Transform& xf = (bots)[i]->box->GetTransform();
+                    b2PolygonShape* poly = (b2PolygonShape*)(bots)[i]->magnets[j].fix->GetShape();
                     int32 vertexCount = poly->m_count;
                     b2Assert(vertexCount <= b2_maxPolygonVertices);
                     b2Vec2 vertices[b2_maxPolygonVertices];
@@ -740,96 +803,6 @@ public:
             b2Vec2 p1 = b2Vec2(b1->box->GetWorldCenter().x,b1->box->GetWorldCenter().y);
             g_debugDraw.DrawCircle(p1, 1.41f, b2Color(1.f, 1.f, 1.f, 0.5f));
         });
-
-        ImGui::SetNextWindowSize(ImVec2(250, 250), ImGuiSetCond_FirstUseEver);
-        if (!ImGui::Begin("Magnets")) {
-
-
-            ImGui::End();
-            return;
-        }
-
-        if (currentBot!= nullptr) {
-            ImGui::Text("current bot: %d", currentBot->id);
-        }
-
-        /*
-        ImDrawList *draw_list = ImGui::GetWindowDrawList();
-
-
-        ImVec2 canvas_pos = ImGui::GetCursorScreenPos();            // ImDrawList API uses screen coordinates!
-        ImVec2 canvas_size = ImGui::GetContentRegionAvail();        // Resize canvas to what's available
-
-        draw_list->AddRectFilledMultiColor(canvas_pos,
-                                           ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y),
-                                           ImColor(50, 50, 50), ImColor(50, 50, 60), ImColor(60, 60, 70),
-                                           ImColor(50, 50, 60));
-        draw_list->AddRect(canvas_pos, ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y),
-                           ImColor(255, 255, 255));
-
-
-        static float sz = 136.0f;
-        static ImVec4 col = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
-        const ImU32 col32 = ImColor(col);
-
-        const ImVec2 p = ImGui::GetCursorScreenPos();
-
-        ImVec2 mp = ImGui::GetIO().MousePos;
-        float x = p.x + 40.0f, y = p.y + 40.0f;
-
-        draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + sz, y + sz), col32);
-
-        ImGui::InvisibleButton("canvas", canvas_size);
-        if (ImGui::IsItemHovered()) {
-            if (ImGui::IsMouseClicked(0)) {
-                draw_list->AddRectFilled(ImVec2(mp.x - 5, mp.y - 5),
-                                         ImVec2(mp.x + 5, mp.y + 5),
-                                         ImColor(255, 0, 0));
-
-                if (mp.x<p.x+sz/2){
-                    if (mp.y>p.y+sz/2){
-                        currentBot->magnets[3].active = !currentBot->magnets[3].active ;
-                    } else{
-                        currentBot->magnets[2].active = !currentBot->magnets[2].active ;
-                    }
-                } else {
-                    if (mp.y > p.y + sz / 2) {
-                        currentBot->magnets[0].active = !currentBot->magnets[0].active;
-                    } else {
-                        currentBot->magnets[1].active = !currentBot->magnets[1].active;
-                    }
-                }
-            }
-        }
-
-        if (currentBot->magnets[3].active){
-            draw_list->AddRectFilled(ImVec2(x - 5, y+sz - 5),
-                                     ImVec2(x + 5, y+sz + 5),
-                                     ImColor(255, 0, 0));
-        }
-
-        if (currentBot->magnets[2].active){
-            draw_list->AddRectFilled(ImVec2(x - 5, y  - 5),
-                                     ImVec2(x + 5, y  + 5),
-                                     ImColor(255, 0, 0));
-        }
-
-        if (currentBot->magnets[1].active){
-            draw_list->AddRectFilled(ImVec2(x + sz - 5, y  - 5),
-                                     ImVec2(x + sz + 5, y  + 5),
-                                     ImColor(255, 0, 0));
-        }
-
-        if (currentBot->magnets[0].active){
-            draw_list->AddRectFilled(ImVec2(x + sz - 5, y + sz - 5),
-                                     ImVec2(x + sz + 5, y + sz + 5),
-                                     ImColor(255, 0, 0));
-        }
-
-*/
-        ImGui::End();
-
-
 
     }
 
@@ -900,7 +873,7 @@ public:
     }
 
 
-    std::vector<boxBot*> *bots;
+    //std::vector<boxBot*> bots = std::vector<boxBot*>();
     std::vector<boxBot*> *destroyedBots;
 
     boxBot *currentBot = nullptr;
@@ -911,6 +884,8 @@ public:
     std::map<int,jointType *> *magnetJoints;
 
     int victoryCount = 0;
+
+    AppLog coinsLog;
 };
 
 #endif

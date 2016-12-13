@@ -207,11 +207,17 @@ static void sKeyCallback(GLFWwindow *, int key, int scancode, int action, int mo
                     test->Keyboard(key);
                 }
         }
+
     }
+    /*
+    if (action == GLFW_REPEAT) {
+        test->Keyboard(key);
+    }
+     */
     else if (action == GLFW_RELEASE) {
         test->KeyboardUp(key);
     }
-    // else GLFW_REPEAT
+
 }
 
 //
@@ -331,25 +337,28 @@ static void sInterface() {
         ImGui::End();
     }
      */
-}
-/*
 
-bool over = ImGui::Begin("Testbed Controls", g_camera.m_width - menuWidth - 10, 10, menuWidth, g_camera.m_height - 20, &ui.scrollarea1);
-if (over) ui.mouseOverMenu = true;
 
-imguiSeparatorLine();
+    ImGui::SetNextWindowSize(ImVec2(250, 250), ImGuiSetCond_FirstUseEver);
+    bool over = ImGui::Begin("Testbed Controls");
+    if (over) ui.mouseOverMenu = true;
 
-imguiLabel("Test");
-if (imguiButton(entry->name, true))
+    ImGui::Separator();
+
+    //ImGui::LabelText("Test",);
+if (ImGui::Button(entry->name))
 {
     ui.chooseTest = !ui.chooseTest;
 }
 
-imguiSeparatorLine();
+    ImGui::Separator();
 
-imguiSlider("Vel Iters", &settings.velocityIterations, 0, 50, 1, true);
-imguiSlider("Pos Iters", &settings.positionIterations, 0, 50, 1, true);
-imguiSlider("Hertz", &settings.hz, 5.0f, 120.0f, 5.0f, true);
+    ImGui::SliderInt("Vel Iters", &settings.velocityIterations, 0, 50 );
+    ImGui::SliderInt("Pos Iters", &settings.positionIterations, 0, 50 );
+    ImGui::SliderFloat("Hertz", &settings.hz, 5.0f, 120.0f);
+    ImGui::End();
+
+    /*
 
 if (imguiCheck("Sleep", settings.enableSleep, true))
     settings.enableSleep = !settings.enableSleep;
@@ -420,7 +429,8 @@ imguiEndScrollArea();
 }
 
 imguiEndFrame();
-*/
+     */
+}
 
 
 //
@@ -462,6 +472,7 @@ int main(int argc, char **argv) {
     glfwSetScrollCallback(mainWindow, sScrollCallback);
     glfwSetWindowSizeCallback(mainWindow, sResizeWindow);
     glfwSetKeyCallback(mainWindow, sKeyCallback);
+    //glfwSetInputMode(mainWindow, GLFW_STICKY_KEYS, 1);
     glfwSetMouseButtonCallback(mainWindow, sMouseButton);
     glfwSetCursorPosCallback(mainWindow, sMouseMotion);
     glfwSetScrollCallback(mainWindow, sScrollCallback);
@@ -546,6 +557,24 @@ int main(int argc, char **argv) {
         glfwSwapBuffers(mainWindow);
 
         glfwPollEvents();
+
+
+
+
+
+        int state = glfwGetKey(mainWindow, GLFW_KEY_A);
+        if (state == GLFW_PRESS)
+        {
+            test->handleFastInput(1.f);
+        }
+
+        state = glfwGetKey(mainWindow, GLFW_KEY_D);
+        if (state == GLFW_PRESS)
+        {
+            test->handleFastInput(-1.f);
+        }
+
+
     }
 
     g_debugDraw.Destroy();

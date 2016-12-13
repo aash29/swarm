@@ -149,6 +149,8 @@ public:
 
     virtual void EnterKeyDown();
 
+    virtual void handleFastInput(float dir);
+
     virtual void Keyboard(int key) { B2_NOT_USED(key); }
 
     virtual void KeyboardUp(int key) { B2_NOT_USED(key); }
