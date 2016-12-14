@@ -405,10 +405,12 @@ public:
 
         //bots = new std::vector<boxBot*>;
         bots.push_back(createBox(0.f, 9.f, getUID()));
+		/*
         bots.push_back(createBox(0.f, 6.f, getUID()));
         bots.push_back(createBox(0.f, 2.f, getUID()));
         bots.push_back(createBox(-2.f, 2.f, getUID()));
         bots.push_back(createBox(2.f, 2.f, getUID()));
+		*/
         //bots->push_back(createBox(-10.f, 2.f, getUID()));
         //b1=createBox(0.f,2.f);
 
@@ -606,61 +608,67 @@ public:
 
 
         boxBot *b1 = SelectBot(p);
-        if (b1 != nullptr) {
-            if (selectedBots->find(b1) != selectedBots->end()) {
+		if (b1 != nullptr) {
+			if (selectedBots->find(b1) != selectedBots->end()) {
 
-                b2AABB aabb;
-                b2Vec2 d;
-                d.Set(0.001f, 0.001f);
-                aabb.lowerBound = p - d;
-                aabb.upperBound = p + d;
+				b2AABB aabb;
+				b2Vec2 d;
+				d.Set(0.001f, 0.001f);
+				aabb.lowerBound = p - d;
+				aabb.upperBound = p + d;
 
-                // Query the world for overlapping shapes.
-                MultiQueryCallback callback(p);
-                m_world->QueryAABB(&callback, aabb);
-                std::for_each(callback.m_fixtures->begin(), callback.m_fixtures->end(), [this, b1, p](b2Fixture *f1) {
-                    b2Body *body = f1->GetBody();
+				// Query the world for overlapping shapes.
+				MultiQueryCallback callback(p);
+				m_world->QueryAABB(&callback, aabb);
+				std::for_each(callback.m_fixtures->begin(), callback.m_fixtures->end(), [this, b1, p](b2Fixture *f1) {
+					b2Body *body = f1->GetBody();
 
 
 
-                        if (f1->GetFilterData().categoryBits == 0x0003) {
-                            int *udInt = (int *) f1->GetUserData();
-                            b1->magnets[*udInt].active = !b1->magnets[*udInt].active;
-                        }
-                        selectedBots->clear();
-                        SetCurrent(b1);
-                        //currentBot = body2Bot(body);
-                        /*
-                        if (body != b1->wheel) {
+					if (f1->GetFilterData().categoryBits == 0x0003) {
+						int *udInt = (int *)f1->GetUserData();
+						b1->magnets[*udInt].active = !b1->magnets[*udInt].active;
+					}
+					selectedBots->clear();
+					SetCurrent(b1);
+					//currentBot = body2Bot(body);
+					/*
+					if (body != b1->wheel) {
 
-                            b2MouseJointDef md;
-                            md.bodyA = m_groundBody;
-                            md.bodyB = body;
-                            md.target = p;
-                            md.maxForce = 1000.0f * body->GetMass();
-                            m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
-                            body->SetAwake(true);
-                        }
+						b2MouseJointDef md;
+						md.bodyA = m_groundBody;
+						md.bodyB = body;
+						md.target = p;
+						md.maxForce = 1000.0f * body->GetMass();
+						m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
+						body->SetAwake(true);
+					}
 
-                        else {
-                            b2MouseJointDef md;
-                            md.bodyA = m_groundBody;
-                            md.bodyB = b1->box;
-                            md.target = p;
-                            md.maxForce = 1000.0f * body->GetMass();
-                            m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
-                            body->SetAwake(true);
-                        }
-                        */
-                    });
-            }
-            else {
-                selectedBots->clear();
-                SetCurrent(b1);
-            }
-        }
+					else {
+						b2MouseJointDef md;
+						md.bodyA = m_groundBody;
+						md.bodyB = b1->box;
+						md.target = p;
+						md.maxForce = 1000.0f * body->GetMass();
+						m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
+						body->SetAwake(true);
+					}
+					*/
+				});
+			}
+			else {
+				selectedBots->clear();
+				SetCurrent(b1);
+			}
+		}
+		
+	};
 
-        }
+	void MouseMove(const b2Vec2 &p)
+	{
+
+		m_mouseWorld = p;
+	}
 
 
     void ShiftMouseDown(const b2Vec2 &p) {
@@ -716,6 +724,21 @@ public:
 
 
         //coinsLog.AddLog("left, %g \n",bots[0]->torque );
+
+
+		std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {
+			//b2Vec2 z1 = b1->box->GetWorldVector(b2Vec2(0.f, 1.f));
+			b2Vec2 z2 = (m_mouseWorld - b1->box->GetPosition());
+			//z1.Normalize();
+			z2.Normalize();
+			float a1 = b1->box->GetAngle();
+			float a2 = atan2(z2.y, z2.x);
+			float M = -500 * (a1 - a2);
+
+			b1->box->ApplyTorque(M, true);
+
+		});
+
 
         for (int i = 0; i < bots.size(); i++) {
 
