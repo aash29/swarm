@@ -726,16 +726,32 @@ public:
         //coinsLog.AddLog("left, %g \n",bots[0]->torque );
 
 
+        static float KI=0,KP=-200.f,KD=-10.f;
+
+        ImGui::SliderFloat("KP", &KP, -1000.0f, 0.0f);
+        ImGui::SliderFloat("KD", &KD, -150.0f, 0.0f);
+
 		std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {
-			//b2Vec2 z1 = b1->box->GetWorldVector(b2Vec2(0.f, 1.f));
+			b2Vec2 z1 = b1->box->GetWorldVector(b2Vec2(1.f, 1.f));
 			b2Vec2 z2 = (m_mouseWorld - b1->box->GetPosition());
 			//z1.Normalize();
-			z2.Normalize();
-			float a1 = b1->box->GetAngle();
-			float a2 = atan2(z2.y, z2.x);
-			float M = -500 * (a1 - a2);
+			//z2.Normalize();
 
-			b1->box->ApplyTorque(M, true);
+			float a1 = b1->box->GetAngle();
+            a1+=b2_pi/4.f;
+			float a2 = atan2(z2.y, z2.x);
+
+            g_debugDraw.DrawSegment(b1->box->GetPosition(), m_mouseWorld,b2Color(1.f,1.f,1.f));
+            g_debugDraw.DrawSegment(b1->box->GetPosition(), b1->box->GetPosition()+z1,b2Color(1.f,0.f,0.f));
+
+            ImGui::Text("bot angle: %g", a1);
+            ImGui::Text("target angle: %g", a2);
+
+            float w1 = b1->box->GetAngularVelocity();
+
+			float MP = KP * sin(a1 - a2);
+            float MD = KD * (w1);
+			b1->box->ApplyTorque(MP+MD, true);
 
 		});
 

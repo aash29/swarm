@@ -356,6 +356,16 @@ if (ImGui::Button(entry->name))
     ImGui::SliderInt("Vel Iters", &settings.velocityIterations, 0, 50 );
     ImGui::SliderInt("Pos Iters", &settings.positionIterations, 0, 50 );
     ImGui::SliderFloat("Hertz", &settings.hz, 5.0f, 120.0f);
+
+    ImGui::Checkbox("Contact Points", &settings.drawContactPoints);
+
+    ImGui::Checkbox("Contact Normals", &settings.drawContactNormals);
+
+    ImGui::Checkbox("Contact Impulses", &settings.drawContactImpulse);
+
+    ImGui::Checkbox("Friction Impulses", &settings.drawFrictionImpulse);
+
+
     ImGui::End();
 
     /*
