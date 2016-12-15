@@ -341,7 +341,7 @@ void Test::Step(Settings *settings) {
     }
 
     if (settings->drawContactPoints) {
-        const float32 k_impulseScale = 0.1f;
+        const float32 k_impulseScale = 1.0f;
         const float32 k_axisScale = 0.3f;
 
         for (int32 i = 0; i < m_pointCount; ++i) {

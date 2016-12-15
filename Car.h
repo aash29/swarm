@@ -65,7 +65,7 @@ public:
         magnet magnets[4];
 		float speed = 0.f;
         float torque = 0.f;
-        float torqueChange = 0.f;
+		float integratedError = 0.f;
         boxBot() {}
 
     };
@@ -161,6 +161,8 @@ public:
 
         chassis.Set(vertices, 4);
 
+
+
         b2CircleShape circle;
         circle.m_radius = 0.7f;
 
@@ -177,6 +179,7 @@ public:
         fd0.density = 1.0f;
         fd0.friction = 0.9f;
         fd0.filter.groupIndex = 2;
+		fd0.filter.categoryBits = 0x0003;
 
 
         bb->fix = bb->box->CreateFixture(&fd0);
@@ -524,7 +527,7 @@ public:
         switch (key) {
             case GLFW_KEY_A:
                 std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {
-                    b1->torqueChange = 5.f;
+                   
                 }
                 );
                 //std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {b1->spring->SetMotorSpeed(-m_speed);});
@@ -538,7 +541,7 @@ public:
                 //std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {b1->spring->SetMotorSpeed(m_speed);});
                 //std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {b1->torque=b1->torque-0.5f;});
                 std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {
-                                  b1->torqueChange = -5.f;
+                          
                               }
                 );
 
@@ -556,6 +559,11 @@ public:
                 );
                 break;
 
+
+			//case GLFW_KEY_SPACE:
+				//pause = !pause;
+				//break;
+
         }
     }
 
@@ -563,14 +571,13 @@ public:
          switch (key) {
              case GLFW_KEY_A:
                  std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot *b1) {
-                                   b1->torqueChange = 0.f;
+
                                }
                  );
                  break;
 
              case GLFW_KEY_D:
                  std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot *b1) {
-                                   b1->torqueChange = 0.f;
                                }
                  );
                  break;
@@ -668,6 +675,9 @@ public:
 	{
 
 		m_mouseWorld = p;
+		std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {
+			b1->integratedError = 0.f;
+		});
 	}
 
 
@@ -725,13 +735,20 @@ public:
 
         //coinsLog.AddLog("left, %g \n",bots[0]->torque );
 
+		ImGui::Checkbox("Manual control", &manualControl);
 
-        static float KI=0,KP=-200.f,KD=-10.f;
+        static float KI=-200.f,KP=-800.f,KD=-40.f;
 
+		ImGui::SliderFloat("KI", &KI, -1000.0f, 1000.0f);
         ImGui::SliderFloat("KP", &KP, -1000.0f, 0.0f);
         ImGui::SliderFloat("KD", &KD, -150.0f, 0.0f);
 
-		std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {
+		//settings->pause = pause;
+		this->settings = settings;
+
+		if (manualControl){
+
+		std::for_each(selectedBots->begin(), selectedBots->end(), [this,settings](boxBot* b1) {
 			b2Vec2 z1 = b1->box->GetWorldVector(b2Vec2(1.f, 1.f));
 			b2Vec2 z2 = (m_mouseWorld - b1->box->GetPosition());
 			//z1.Normalize();
@@ -740,6 +757,8 @@ public:
 			float a1 = b1->box->GetAngle();
             a1+=b2_pi/4.f;
 			float a2 = atan2(z2.y, z2.x);
+
+			b1->integratedError += sin(a1 - a2)*1.f / settings->hz;
 
             g_debugDraw.DrawSegment(b1->box->GetPosition(), m_mouseWorld,b2Color(1.f,1.f,1.f));
             g_debugDraw.DrawSegment(b1->box->GetPosition(), b1->box->GetPosition()+z1,b2Color(1.f,0.f,0.f));
@@ -751,9 +770,26 @@ public:
 
 			float MP = KP * sin(a1 - a2);
             float MD = KD * (w1);
-			b1->box->ApplyTorque(MP+MD, true);
+
+			float MI = KI * b1->integratedError;
+
+			b2Vec2 v = b1->box->GetLinearVelocity();
+			b2Vec2 p0 = b1->box->GetPosition();
+			float dt = 0.01f;
+			for (int i=0; i< 300; i++)
+			{
+				g_debugDraw.DrawSegment(p0, p0 + dt*v, b2Color(1.f, 1.f, 1.f));
+				v.y = v.y - 9.8*dt;
+				p0 = p0 + dt*v;
+				
+
+			};
+
+
+			b1->box->ApplyTorque(MP+MD+MI, true);
 
 		});
+		}
 
 
         for (int i = 0; i < bots.size(); i++) {
@@ -882,6 +918,29 @@ public:
             victoryCount++;
             //destroyedBots->push_back(contactBot);
         }
+
+
+
+		b2Body* currentBody = nullptr;
+		if (contact->GetFixtureA()->GetFilterData().categoryBits == 3)
+		{
+			currentBody = contact->GetFixtureA()->GetBody();
+		}
+		else
+		if (contact->GetFixtureB()->GetFilterData().categoryBits == 3)
+		{
+			currentBody = contact->GetFixtureB()->GetBody();
+		}
+
+		if (currentBody != nullptr) {
+			boxBot* contactBot = body2Bot(currentBody);
+			if (selectedBots->find(contactBot)!= selectedBots->end()){
+			    settings->pause = true;
+				settings->hz = 200.f;
+			}
+			//destroyedBots->push_back(contactBot);
+		}
+
     }
 
     void EndContact(b2Contact* contact)
@@ -904,6 +963,30 @@ public:
 
             victoryCount--;
         }
+
+
+
+		b2Body* currentBody = nullptr;
+		if (contact->GetFixtureA()->GetFilterData().categoryBits == 3)
+		{
+			currentBody = contact->GetFixtureA()->GetBody();
+		}
+		else
+			if (contact->GetFixtureB()->GetFilterData().categoryBits == 3)
+			{
+				currentBody = contact->GetFixtureB()->GetBody();
+			}
+
+		if (currentBody != nullptr) {
+			boxBot* contactBot = body2Bot(currentBody);
+			if (selectedBots->find(contactBot) != selectedBots->end()) {
+				//pause = true;
+				settings->hz = 60.f;
+			}
+			//destroyedBots->push_back(contactBot);
+		}
+
+
     }
 
 
@@ -923,6 +1006,10 @@ public:
     std::map<int,jointType *> *magnetJoints;
 
     int victoryCount = 0;
+
+	bool manualControl=true;
+	bool pause = false;
+	Settings* settings;
 
     AppLog coinsLog;
 };

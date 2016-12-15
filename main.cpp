@@ -355,7 +355,7 @@ if (ImGui::Button(entry->name))
 
     ImGui::SliderInt("Vel Iters", &settings.velocityIterations, 0, 50 );
     ImGui::SliderInt("Pos Iters", &settings.positionIterations, 0, 50 );
-    ImGui::SliderFloat("Hertz", &settings.hz, 5.0f, 120.0f);
+    ImGui::SliderFloat("Hertz", &settings.hz, 5.0f, 200.0f);
 
     ImGui::Checkbox("Contact Points", &settings.drawContactPoints);
 
@@ -459,7 +459,7 @@ int main(int argc, char **argv) {
     }
 
     char title[64];
-    sprintf(title, "Box2D Testbed Version %d.%d.%d", b2_version.major, b2_version.minor, b2_version.revision);
+    sprintf(title, "Cubeswarm");
 
 
     mainWindow = glfwCreateWindow(g_camera.m_width, g_camera.m_height, title, NULL, NULL);
