@@ -354,7 +354,7 @@ public:
 
             float32 hs[10] = {0.25f, 1.0f, 4.0f, 0.0f, 0.0f, -1.0f, -2.0f, -2.0f, -1.25f, 0.0f};
 
-            float32 groundMap[20][2] = {{-20.0f,20.0f}, {-20.0f,10.0f}, {-15.f,10.0f}, {-10.0f,10.0f}, {-5.f,10.0f},{-5.f,0.0f},{0.0f,0.0f}, {5.0f,0.0f}, {5.0f,10.0f}, {10.f,10.0f}, {15.0f,10.0f}, {20.f,10.0f},{20.f,20.0f}};
+            float32 groundMap[20][2] = {{-20.0f,60.0f}, {-20.0f,40.0f}, {-15.f,40.0f}, {-10.0f,40.0f}, {-5.f,40.0f},{-5.f,0.0f},{0.0f,0.0f}, {5.0f,0.0f}, {5.0f,40.0f}, {10.f,40.0f}, {15.0f,40.0f}, {20.f,40.0f},{20.f,60.0f}};
 
             float32 x = 20.0f, y1 = 0.0f, dx = 5.0f;
 /*
@@ -746,7 +746,7 @@ public:
 		//settings->pause = pause;
 		this->settings = settings;
 
-		if (manualControl){
+
 
 		std::for_each(selectedBots->begin(), selectedBots->end(), [this,settings](boxBot* b1) {
 			b2Vec2 z1 = b1->box->GetWorldVector(b2Vec2(1.f, 1.f));
@@ -781,15 +781,15 @@ public:
 				g_debugDraw.DrawSegment(p0, p0 + dt*v, b2Color(1.f, 1.f, 1.f));
 				v.y = v.y - 9.8*dt;
 				p0 = p0 + dt*v;
-				
+
 
 			};
-
-
-			b1->box->ApplyTorque(MP+MD+MI, true);
+            if (manualControl) {
+                b1->box->ApplyTorque(MP+MD+MI, true);
+            }
 
 		});
-		}
+
 
 
         for (int i = 0; i < bots.size(); i++) {
@@ -936,7 +936,12 @@ public:
 			boxBot* contactBot = body2Bot(currentBody);
 			if (selectedBots->find(contactBot)!= selectedBots->end()){
 			    settings->pause = true;
-				settings->hz = 200.f;
+
+                if (fmod(currentBody->GetAngle(), b2_pi/2) > b2_pi/4) {
+                    currentBody->ApplyTorque(-10000.f, true);
+                } else {
+                    currentBody->ApplyTorque(10000.f, true);
+                }
 			}
 			//destroyedBots->push_back(contactBot);
 		}
@@ -1007,7 +1012,7 @@ public:
 
     int victoryCount = 0;
 
-	bool manualControl=true;
+	bool manualControl = false;
 	bool pause = false;
 	Settings* settings;
 
