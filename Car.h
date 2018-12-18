@@ -180,6 +180,7 @@ public:
         fd0.friction = 0.9f;
         fd0.filter.groupIndex = 2;
 		fd0.filter.categoryBits = 0x0003;
+        fd0.restitution = 0.f;
 
 
         bb->fix = bb->box->CreateFixture(&fd0);
@@ -195,22 +196,22 @@ public:
 
 
         bd.position.Set(x, y);
-        bb->wheel = m_world->CreateBody(&bd);
-        bb->wheel->CreateFixture(&fd);
+        //bb->wheel = m_world->CreateBody(&bd);
+        //bb->wheel->CreateFixture(&fd);
 
 
-        b2RevoluteJointDef jd;
-        b2Vec2 axis(0.0f, 0.0f);
+        //b2RevoluteJointDef jd;
+        //b2Vec2 axis(0.0f, 0.0f);
 
-        jd.Initialize(bb->box, bb->wheel, bb->wheel->GetPosition());
-        jd.motorSpeed = 0.0f;
-        jd.maxMotorTorque = 600.0f;
-        jd.enableMotor = true;
-
-
+        //jd.Initialize(bb->box, bb->wheel, bb->wheel->GetPosition());
+        //jd.motorSpeed = 0.0f;
+        //jd.maxMotorTorque = 600.0f;
+        //jd.enableMotor = true;
 
 
-        bb->spring = (b2RevoluteJoint *) m_world->CreateJoint(&jd);
+
+
+        //bb->spring = (b2RevoluteJoint *) m_world->CreateJoint(&jd);
 
 
 
@@ -347,6 +348,7 @@ public:
             fd.shape = &shape;
             fd.density = 0.0f;
             fd.friction = 0.9f;
+            fd.restitution = 0.f;
 
             shape.Set(b2Vec2(-20.0f, 0.0f), b2Vec2(20.0f, 0.0f));
 
@@ -419,12 +421,20 @@ public:
 
         //b2=createBox(2.f,2.f);
 
+
+        bots[0]->box->SetTransform(b2Vec2(0.f, 9.f),-b2_pi/4-0.2f);
+        bots[0]->box->SetLinearVelocity(b2Vec2(-10.f,0.f));
+
+
+
         destroyedBots = new std::vector<boxBot*>;
 
 
         magnetJoints = new std::map<int,jointType *>;
         currentBot = nullptr;
         selectedBots = new std::unordered_set<boxBot*>;
+
+        SetCurrent(bots[0]);
         //SetCurrent(&((*bots)[0]));
 
     }
@@ -764,6 +774,7 @@ public:
             g_debugDraw.DrawSegment(b1->box->GetPosition(), b1->box->GetPosition()+z1,b2Color(1.f,0.f,0.f));
 
             ImGui::Text("bot angle: %g", a1);
+            ImGui::Text("bot angle: %g", fmod(a1,b2_pi/2));
             ImGui::Text("target angle: %g", a2);
 
             float w1 = b1->box->GetAngularVelocity();
@@ -787,6 +798,8 @@ public:
             if (manualControl) {
                 b1->box->ApplyTorque(MP+MD+MI, true);
             }
+
+            ImGui::Text("bot angular velocity: %g", b1->box->GetAngularVelocity());
 
 		});
 
@@ -936,17 +949,29 @@ public:
 			boxBot* contactBot = body2Bot(currentBody);
 			if (selectedBots->find(contactBot)!= selectedBots->end()){
 			    settings->pause = true;
-
-                if (fmod(currentBody->GetAngle(), b2_pi/2) > b2_pi/4) {
-                    currentBody->ApplyTorque(-10000.f, true);
+                ImGui::Text("local normal x: %g", contact->GetManifold()->localNormal.x);
+                if (currentBody->GetPosition().x > 0.f) {
+                    if (fmod(currentBody->GetAngle(), b2_pi / 2) > 0) {
+                        //currentBody->ApplyTorque(-100000.f, true);
+                        currentBody->SetAngularVelocity(-100.f);
+                    } else {
+                        // currentBody->ApplyTorque(100000.f, true);
+                        currentBody->SetAngularVelocity(-100.f);
+                    }
                 } else {
-                    currentBody->ApplyTorque(10000.f, true);
+                    if (fmod(currentBody->GetAngle(), b2_pi / 2) > 0) {
+                        //currentBody->ApplyTorque(-100000.f, true);
+                        currentBody->SetAngularVelocity( 100.f);
+                    } else {
+                        // currentBody->ApplyTorque(100000.f, true);
+                        currentBody->SetAngularVelocity(100.f);
+                    }
                 }
 			}
 			//destroyedBots->push_back(contactBot);
 		}
 
-    }
+     }
 
     void EndContact(b2Contact* contact)
     {
@@ -986,7 +1011,7 @@ public:
 			boxBot* contactBot = body2Bot(currentBody);
 			if (selectedBots->find(contactBot) != selectedBots->end()) {
 				//pause = true;
-				settings->hz = 60.f;
+				//settings->hz = 200.f;
 			}
 			//destroyedBots->push_back(contactBot);
 		}

@@ -62,7 +62,7 @@ inline float32 RandomFloat(float32 lo, float32 hi) {
 /// Test settings. Some can be controlled in the GUI.
 struct Settings {
     Settings() {
-        hz = 60.0f;
+        hz = 200.0f;
         velocityIterations = 8;
         positionIterations = 3;
         drawShapes = true;

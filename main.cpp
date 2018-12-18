@@ -357,6 +357,8 @@ if (ImGui::Button(entry->name))
     ImGui::SliderInt("Pos Iters", &settings.positionIterations, 0, 50 );
     ImGui::SliderFloat("Hertz", &settings.hz, 5.0f, 200.0f);
 
+    ImGui::Checkbox("single step", &settings.singleStep);
+
     ImGui::Checkbox("Contact Points", &settings.drawContactPoints);
 
     ImGui::Checkbox("Contact Normals", &settings.drawContactNormals);
@@ -364,6 +366,8 @@ if (ImGui::Button(entry->name))
     ImGui::Checkbox("Contact Impulses", &settings.drawContactImpulse);
 
     ImGui::Checkbox("Friction Impulses", &settings.drawFrictionImpulse);
+
+
 
 
     ImGui::End();
