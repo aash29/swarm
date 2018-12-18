@@ -422,9 +422,10 @@ public:
         //b2=createBox(2.f,2.f);
 
 
-        bots[0]->box->SetTransform(b2Vec2(0.f, 9.f),-b2_pi/4-0.2f);
+        bots[0]->box->SetTransform(b2Vec2(0.f, 9.f), 0);
         bots[0]->box->SetLinearVelocity(b2Vec2(-10.f,0.f));
 
+        bots[0]->box->SetAngularVelocity(0);
 
 
         destroyedBots = new std::vector<boxBot*>;
@@ -911,9 +912,9 @@ public:
     }
 
 
-    void BeginContact(b2Contact* contact)
-    {
 
+    void PreSolve(b2Contact* contact, const b2Manifold* oldManifold)
+    {
         b2Body* targetBody = nullptr;
         if (contact->GetFixtureA()->GetFilterData().categoryBits==2)
         {
@@ -934,42 +935,41 @@ public:
 
 
 
-		b2Body* currentBody = nullptr;
-		if (contact->GetFixtureA()->GetFilterData().categoryBits == 3)
-		{
-			currentBody = contact->GetFixtureA()->GetBody();
-		}
-		else
-		if (contact->GetFixtureB()->GetFilterData().categoryBits == 3)
-		{
-			currentBody = contact->GetFixtureB()->GetBody();
-		}
+        b2Body* currentBody = nullptr;
+        if (contact->GetFixtureA()->GetFilterData().categoryBits == 3)
+        {
+            currentBody = contact->GetFixtureA()->GetBody();
+        }
+        else
+        if (contact->GetFixtureB()->GetFilterData().categoryBits == 3)
+        {
+            currentBody = contact->GetFixtureB()->GetBody();
+        }
 
-		if (currentBody != nullptr) {
-			boxBot* contactBot = body2Bot(currentBody);
-			if (selectedBots->find(contactBot)!= selectedBots->end()){
-			    settings->pause = true;
+        if (currentBody != nullptr) {
+            boxBot* contactBot = body2Bot(currentBody);
+            if (selectedBots->find(contactBot)!= selectedBots->end()){
+                settings->pause = true;
                 ImGui::Text("local normal x: %g", contact->GetManifold()->localNormal.x);
                 if (currentBody->GetPosition().x > 0.f) {
-                    if (fmod(currentBody->GetAngle(), b2_pi / 2) > 0) {
-                        //currentBody->ApplyTorque(-100000.f, true);
-                        currentBody->SetAngularVelocity(-100.f);
-                    } else {
-                        // currentBody->ApplyTorque(100000.f, true);
-                        currentBody->SetAngularVelocity(-100.f);
-                    }
+                    //currentBody->SetAngularVelocity(-100.f);
+                    currentBody->ApplyTorque(-100000.f, true);
                 } else {
-                    if (fmod(currentBody->GetAngle(), b2_pi / 2) > 0) {
-                        //currentBody->ApplyTorque(-100000.f, true);
-                        currentBody->SetAngularVelocity( 100.f);
-                    } else {
-                        // currentBody->ApplyTorque(100000.f, true);
-                        currentBody->SetAngularVelocity(100.f);
-                    }
+                    //currentBody->SetAngularVelocity( 100.f);
+                    currentBody->ApplyTorque(100000.f, true);
                 }
-			}
-			//destroyedBots->push_back(contactBot);
-		}
+            }
+            //destroyedBots->push_back(contactBot);
+        }
+
+    }
+
+
+
+    void BeginContact(b2Contact* contact)
+    {
+
+
 
      }
 
