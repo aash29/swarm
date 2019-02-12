@@ -68,10 +68,10 @@ struct Settings {
         drawShapes = true;
         drawJoints = true;
         drawAABBs = false;
-        drawContactPoints = false;
-        drawContactNormals = false;
-        drawContactImpulse = false;
-        drawFrictionImpulse = false;
+        drawContactPoints = true;
+        drawContactNormals = true;
+        drawContactImpulse = true;
+        drawFrictionImpulse = true;
         drawCOMs = false;
         drawStats = false;
         drawProfile = false;

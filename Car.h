@@ -12,8 +12,9 @@
 #include "coinsLog.h"
 
 
-
 #define jointType b2DistanceJoint
+
+
 
 
 class MultiQueryCallback : public b2QueryCallback {
@@ -221,7 +222,7 @@ public:
         mfd2.shape = &magFix;
         mfd2.density = 0.001f;
         mfd2.friction = 0.9f;
-        mfd2.filter.categoryBits=0x0003;   // magnet triggers
+        mfd2.filter.categoryBits=0x0004;   // magnet triggers
 
 
         magFix.SetAsBox(0.5f,0.5f,b2Vec2(0.5f,-0.5f),0.f);
@@ -271,7 +272,7 @@ public:
             mfd2.shape = &magFix;
             mfd2.density = 0.001f;
             mfd2.friction = 0.9f;
-            mfd2.filter.categoryBits=3;   // magnet triggers
+            mfd2.filter.categoryBits=0x0004;   // magnet triggers
 
 
             magFix.SetAsBox(0.5f,0.5f,b2Vec2(0.5f,-0.5f),0.f);
@@ -559,6 +560,9 @@ public:
                 );
                 break;
 
+			case GLFW_KEY_LEFT_CONTROL:
+				manualControl = true;
+
 
 			//case GLFW_KEY_SPACE:
 				//pause = !pause;
@@ -581,6 +585,10 @@ public:
                                }
                  );
                  break;
+
+
+			 case GLFW_KEY_LEFT_CONTROL:
+				 manualControl = false;
          }
 
      }
@@ -592,7 +600,8 @@ public:
     void EnterKeyDown(){
         std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {
             for (int i=0; i<4; i++)
-                b1->magnets[i].active=!b1->magnets[i].active;});
+                b1->magnets[i].active=!b1->magnets[i].active;
+		});
     };
 
 
@@ -627,6 +636,18 @@ public:
 				// Query the world for overlapping shapes.
 				MultiQueryCallback callback(p);
 				m_world->QueryAABB(&callback, aabb);
+
+				for (auto f1 = callback.m_fixtures->begin(); f1 != callback.m_fixtures->end(); f1++) {
+					b2Body *body = (*f1)->GetBody();
+
+					if ((*f1)->GetFilterData().categoryBits == 0x0004) {
+						int *udInt = (int *)(*f1)->GetUserData();
+						b1->magnets[*udInt].active = !b1->magnets[*udInt].active;
+					}
+					selectedBots->clear();
+					SetCurrent(b1);
+				}
+				/*
 				std::for_each(callback.m_fixtures->begin(), callback.m_fixtures->end(), [this, b1, p](b2Fixture *f1) {
 					b2Body *body = f1->GetBody();
 
@@ -639,29 +660,9 @@ public:
 					selectedBots->clear();
 					SetCurrent(b1);
 					//currentBot = body2Bot(body);
-					/*
-					if (body != b1->wheel) {
-
-						b2MouseJointDef md;
-						md.bodyA = m_groundBody;
-						md.bodyB = body;
-						md.target = p;
-						md.maxForce = 1000.0f * body->GetMass();
-						m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
-						body->SetAwake(true);
-					}
-
-					else {
-						b2MouseJointDef md;
-						md.bodyA = m_groundBody;
-						md.bodyB = b1->box;
-						md.target = p;
-						md.maxForce = 1000.0f * body->GetMass();
-						m_mouseJoint = (b2MouseJoint *) m_world->CreateJoint(&md);
-						body->SetAwake(true);
-					}
-					*/
+	
 				});
+				*/
 			}
 			else {
 				selectedBots->clear();
@@ -735,13 +736,15 @@ public:
 
         //coinsLog.AddLog("left, %g \n",bots[0]->torque );
 
-		ImGui::Checkbox("Manual control", &manualControl);
+		//ImGui::Checkbox("Manual control", &manualControl);
 
-        static float KI=-200.f,KP=-800.f,KD=-40.f;
+        static float KI=-200.f, KP=-800.f, KD=-40.f, MAXM = 400.0f;
 
 		ImGui::SliderFloat("KI", &KI, -1000.0f, 1000.0f);
         ImGui::SliderFloat("KP", &KP, -1000.0f, 0.0f);
         ImGui::SliderFloat("KD", &KD, -150.0f, 0.0f);
+
+		ImGui::SliderFloat("MAXM", &MAXM, 0.0f, 400.0f);
 
 		//settings->pause = pause;
 		this->settings = settings;
@@ -775,6 +778,7 @@ public:
 
 			b2Vec2 v = b1->box->GetLinearVelocity();
 			b2Vec2 p0 = b1->box->GetPosition();
+			/*
 			float dt = 0.01f;
 			for (int i=0; i< 300; i++)
 			{
@@ -784,9 +788,10 @@ public:
 				
 
 			};
-
-
-			b1->box->ApplyTorque(MP+MD+MI, true);
+			*/
+			float currentM = std::min(MP + MD + MI, MAXM);
+			currentM = std::max(currentM, -MAXM);
+			b1->box->ApplyTorque(currentM, true);
 
 		});
 		}
@@ -935,8 +940,8 @@ public:
 		if (currentBody != nullptr) {
 			boxBot* contactBot = body2Bot(currentBody);
 			if (selectedBots->find(contactBot)!= selectedBots->end()){
-			    settings->pause = true;
-				settings->hz = 200.f;
+			    //settings->pause = true;
+				//settings->hz = 200.f;
 			}
 			//destroyedBots->push_back(contactBot);
 		}
@@ -981,7 +986,7 @@ public:
 			boxBot* contactBot = body2Bot(currentBody);
 			if (selectedBots->find(contactBot) != selectedBots->end()) {
 				//pause = true;
-				settings->hz = 60.f;
+				//settings->hz = 60.f;
 			}
 			//destroyedBots->push_back(contactBot);
 		}
@@ -1007,7 +1012,7 @@ public:
 
     int victoryCount = 0;
 
-	bool manualControl=true;
+	bool manualControl = false;
 	bool pause = false;
 	Settings* settings;
 

@@ -365,6 +365,8 @@ if (ImGui::Button(entry->name))
 
     ImGui::Checkbox("Friction Impulses", &settings.drawFrictionImpulse);
 
+	ImGui::Checkbox("Single step", &settings.singleStep);
+
 
     ImGui::End();
 
