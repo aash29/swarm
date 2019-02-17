@@ -67,6 +67,11 @@ public:
 		float speed = 0.f;
         float torque = 0.f;
 		float integratedError = 0.f;
+
+		float zero = 0.f;
+		float refAngle = 0.f;
+		bool feedback = false;
+
         boxBot() {}
 
     };
@@ -408,7 +413,11 @@ public:
 
 
         //bots = new std::vector<boxBot*>;
-        bots.push_back(createBox(0.f, 9.f, getUID()));
+        bots.push_back(createBox(-10.f, 19.f, getUID()));
+		bots.push_back(createBox(-15.f, 25.f, getUID()));
+		bots.push_back(createBox(-12.f, 27.f, getUID()));
+		bots.push_back(createBox(-17.f, 21.f, getUID()));
+
 		/*
         bots.push_back(createBox(0.f, 6.f, getUID()));
         bots.push_back(createBox(0.f, 2.f, getUID()));
@@ -561,7 +570,13 @@ public:
                 break;
 
 			case GLFW_KEY_LEFT_CONTROL:
-				manualControl = true;
+				//manualControl = true;
+
+				std::for_each(selectedBots->begin(), selectedBots->end(), [this](boxBot* b1) {
+					b1->feedback = !b1->feedback;
+							}
+				);
+				break;
 
 
 			//case GLFW_KEY_SPACE:
@@ -609,13 +624,16 @@ public:
         bots[0]->torque+=1.f*dir;
     };
 
-
+	void MouseUp(const b2Vec2 &p) {
+		leftMouseDown = false;
+	}
 
 
     void MouseDown(const b2Vec2 &p) {
         //Test::MouseDown(p);
 
         m_mouseWorld = p;
+		leftMouseDown = true;
 
 
         if (m_mouseJoint != NULL) {
@@ -736,7 +754,7 @@ public:
 
         //coinsLog.AddLog("left, %g \n",bots[0]->torque );
 
-		//ImGui::Checkbox("Manual control", &manualControl);
+		
 
         static float KI=-200.f, KP=-800.f, KD=-40.f, MAXM = 400.0f;
 
@@ -749,52 +767,87 @@ public:
 		//settings->pause = pause;
 		this->settings = settings;
 
-		if (manualControl){
+		//if (manualControl){
 
-		std::for_each(selectedBots->begin(), selectedBots->end(), [this,settings](boxBot* b1) {
-			b2Vec2 z1 = b1->box->GetWorldVector(b2Vec2(1.f, 1.f));
-			b2Vec2 z2 = (m_mouseWorld - b1->box->GetPosition());
-			//z1.Normalize();
-			//z2.Normalize();
+		std::for_each(bots.begin(), bots.end(), [this, settings](boxBot* b1) {
+			if (b1->feedback) {
 
-			float a1 = b1->box->GetAngle();
-            a1+=b2_pi/4.f;
-			float a2 = atan2(z2.y, z2.x);
+				//b2Vec2 z1 = b1->box->GetWorldVector(b2Vec2(1.f, 1.f));
+				//b2Vec2 z2 = (m_mouseWorld - b1->box->GetPosition());
+				//z1.Normalize();
+				//z2.Normalize();
 
-			b1->integratedError += sin(a1 - a2)*1.f / settings->hz;
+				float a1 = b1->box->GetAngle();
+				a1 += b2_pi / 4.f - b1->zero;
+				//float a1 = b1->zero;
+				
+				float a2 = b1->refAngle;
 
-            g_debugDraw.DrawSegment(b1->box->GetPosition(), m_mouseWorld,b2Color(1.f,1.f,1.f));
-            g_debugDraw.DrawSegment(b1->box->GetPosition(), b1->box->GetPosition()+z1,b2Color(1.f,0.f,0.f));
+				b1->integratedError += sin(a1 - a2)*1.f / settings->hz;
 
-            ImGui::Text("bot angle: %g", a1);
-            ImGui::Text("target angle: %g", a2);
 
-            float w1 = b1->box->GetAngularVelocity();
+				float w1 = b1->box->GetAngularVelocity();
 
-			float MP = KP * sin(a1 - a2);
-            float MD = KD * (w1);
+				float MP = KP * sin(a1 - a2);
+				float MD = KD * (w1);
 
-			float MI = KI * b1->integratedError;
+				float MI = KI * b1->integratedError;
 
-			b2Vec2 v = b1->box->GetLinearVelocity();
-			b2Vec2 p0 = b1->box->GetPosition();
-			/*
-			float dt = 0.01f;
-			for (int i=0; i< 300; i++)
-			{
+				b2Vec2 v = b1->box->GetLinearVelocity();
+				b2Vec2 p0 = b1->box->GetPosition();
+				/*
+				float dt = 0.01f;
+				for (int i=0; i< 300; i++)
+				{
 				g_debugDraw.DrawSegment(p0, p0 + dt*v, b2Color(1.f, 1.f, 1.f));
 				v.y = v.y - 9.8*dt;
 				p0 = p0 + dt*v;
-				
 
-			};
-			*/
-			float currentM = std::min(MP + MD + MI, MAXM);
-			currentM = std::max(currentM, -MAXM);
-			b1->box->ApplyTorque(currentM, true);
+
+				};
+				*/
+				float currentM = std::min(MP + MD + MI, MAXM);
+				currentM = std::max(currentM, -MAXM);
+				b1->box->ApplyTorque(currentM, true);
+			}
+		});
+
+		std::for_each(selectedBots->begin(), selectedBots->end(), [this,settings](boxBot* b1) {
+
+			ImGui::Checkbox("feedback", &b1->feedback);
+
+				b2Vec2 z1 = b1->box->GetWorldVector(b2Vec2(cos(b1->zero), sin(b1->zero)));
+				b2Vec2 z2 = (m_mouseWorld - b1->box->GetPosition());
+				//z1.Normalize();
+				//z2.Normalize();
+				ImGui::Text("z1: %g", z2.Length());
+
+
+				if (leftMouseDown){
+
+					float a2 = atan2(z2.y, z2.x);
+
+
+					if (z2.Length() < 3.f) {
+						b1->zero = a2;
+					}
+					else {
+						b1->refAngle = a2;
+					}
+				}
+				//b1->integratedError += sin(a1 - a2)*1.f / settings->hz;
+
+				g_debugDraw.DrawSegment(b1->box->GetPosition(), m_mouseWorld, b2Color(1.f, 1.f, 1.f));
+				g_debugDraw.DrawSegment(b1->box->GetPosition(), b1->box->GetPosition() + z1, b2Color(1.f, 0.f, 0.f));
+
+				//
+				//ImGui::Text("target angle: %g", a2);
+
+
+		
 
 		});
-		}
+		//}
 
 
         for (int i = 0; i < bots.size(); i++) {
@@ -1013,6 +1066,8 @@ public:
     int victoryCount = 0;
 
 	bool manualControl = false;
+	bool leftMouseDown = false;
+
 	bool pause = false;
 	Settings* settings;
 
