@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/swarm.iml" filepath="$PROJECT_DIR$/.idea/swarm.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/swarm_imgui.iml" filepath="$PROJECT_DIR$/.idea/swarm_imgui.iml" />
     </modules>
   </component>
 </project>

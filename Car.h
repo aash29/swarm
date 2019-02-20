@@ -201,22 +201,22 @@ public:
 
 
         bd.position.Set(x, y);
-        bb->wheel = m_world->CreateBody(&bd);
-        bb->wheel->CreateFixture(&fd);
+        //bb->wheel = m_world->CreateBody(&bd);
+        //bb->wheel->CreateFixture(&fd);
 
 
         b2RevoluteJointDef jd;
         b2Vec2 axis(0.0f, 0.0f);
 
-        jd.Initialize(bb->box, bb->wheel, bb->wheel->GetPosition());
-        jd.motorSpeed = 0.0f;
-        jd.maxMotorTorque = 600.0f;
-        jd.enableMotor = true;
+        //jd.Initialize(bb->box, bb->wheel, bb->wheel->GetPosition());
+        //jd.motorSpeed = 0.0f;
+        //jd.maxMotorTorque = 600.0f;
+        //jd.enableMotor = true;
 
 
 
 
-        bb->spring = (b2RevoluteJoint *) m_world->CreateJoint(&jd);
+        //bb->spring = (b2RevoluteJoint *) m_world->CreateJoint(&jd);
 
 
 
@@ -414,9 +414,9 @@ public:
 
         //bots = new std::vector<boxBot*>;
         bots.push_back(createBox(-10.f, 19.f, getUID()));
-		bots.push_back(createBox(-15.f, 25.f, getUID()));
-		bots.push_back(createBox(-12.f, 27.f, getUID()));
-		bots.push_back(createBox(-17.f, 21.f, getUID()));
+		//bots.push_back(createBox(-15.f, 25.f, getUID()));
+		//bots.push_back(createBox(-12.f, 27.f, getUID()));
+		//bots.push_back(createBox(-17.f, 21.f, getUID()));
 
 		/*
         bots.push_back(createBox(0.f, 6.f, getUID()));
@@ -756,11 +756,11 @@ public:
 
 		
 
-        static float KI=-200.f, KP=-800.f, KD=-40.f, MAXM = 400.0f;
+        static float KI=-20.f, KP=-200.f, KD=-40.f, MAXM = 400.0f;
 
-		ImGui::SliderFloat("KI", &KI, -1000.0f, 1000.0f);
-        ImGui::SliderFloat("KP", &KP, -1000.0f, 0.0f);
-        ImGui::SliderFloat("KD", &KD, -150.0f, 0.0f);
+		ImGui::SliderFloat("KI", &KI, -10.0f, 10.0f);
+        ImGui::SliderFloat("KP", &KP, -400.0f, 400.0f);
+        ImGui::SliderFloat("KD", &KD, -850.0f, 850.0f);
 
 		ImGui::SliderFloat("MAXM", &MAXM, 0.0f, 400.0f);
 
@@ -772,23 +772,55 @@ public:
 		std::for_each(bots.begin(), bots.end(), [this, settings](boxBot* b1) {
 			if (b1->feedback) {
 
-				//b2Vec2 z1 = b1->box->GetWorldVector(b2Vec2(1.f, 1.f));
-				//b2Vec2 z2 = (m_mouseWorld - b1->box->GetPosition());
+				b2Vec2 z1 = b1->box->GetWorldVector(b2Vec2(1.f, 1.f));
+				b2Vec2 z2 = (m_mouseWorld - b1->box->GetPosition());
 				//z1.Normalize();
 				//z2.Normalize();
 
-				float a1 = b1->box->GetAngle();
-				a1 += b2_pi / 4.f - b1->zero;
+
+
+				//a1 += b2_pi / 4.f - b1->zero;
 				//float a1 = b1->zero;
 				
-				float a2 = b1->refAngle;
+                //if (delta > b2_pi) {
+                //    delta = delta - b2_pi;
+                //}
 
-				b1->integratedError += sin(a1 - a2)*1.f / settings->hz;
 
+
+                float phi = b1->box->GetAngle();
+
+                float a1 = atan2(sin(phi),cos(phi)) - b1->zero;
+                float a2 = b1->refAngle;
+
+
+                float delta = (a1-a2);
+
+                if ((a1>b2_pi/2) && (a2<-b2_pi/2)){
+                    delta=-delta;
+                }
+
+
+                if ((a2>b2_pi/2) && (a1<-b2_pi/2)){
+                    delta=-delta;
+                }
+
+                b1->integratedError += delta*1.f / settings->hz;
+
+
+
+                ImGui::Text("angle: %g", b1->box->GetAngle());
+                ImGui::Text("angle / 2Pi: %g", b1->box->GetAngle() / (2*b2_pi));
+                ImGui::Text("floor(angle / 2Pi): %g", floor(b1->box->GetAngle() / (2*b2_pi)));
+                ImGui::Text("atan2(cos(phi),sin(phi)): %g", atan2(sin(phi),cos(phi)));
+
+
+
+                //ImGui::Text("atan2: %g", a2);
 
 				float w1 = b1->box->GetAngularVelocity();
 
-				float MP = KP * sin(a1 - a2);
+				float MP = KP * delta;
 				float MD = KD * (w1);
 
 				float MI = KI * b1->integratedError;
@@ -816,20 +848,21 @@ public:
 
 			ImGui::Checkbox("feedback", &b1->feedback);
 
-				b2Vec2 z1 = b1->box->GetWorldVector(b2Vec2(cos(b1->zero), sin(b1->zero)));
-				b2Vec2 z2 = (m_mouseWorld - b1->box->GetPosition());
-				//z1.Normalize();
-				//z2.Normalize();
-				ImGui::Text("z1: %g", z2.Length());
+            b2Vec2 z1 = b1->box->GetWorldVector(b2Vec2(cos(b1->zero), sin(b1->zero)));
+            b2Vec2 z2 = (m_mouseWorld - b1->box->GetPosition());
+
+
+            float a2 = atan2(z2.y, z2.x);
+
 
 
 				if (leftMouseDown){
 
-					float a2 = atan2(z2.y, z2.x);
+
 
 
 					if (z2.Length() < 3.f) {
-						b1->zero = a2;
+						//b1->zero = remainder(a2 - b1->box->GetAngle(),2*b2_pi);
 					}
 					else {
 						b1->refAngle = a2;
@@ -945,7 +978,7 @@ public:
         {
 
             m_world->DestroyBody((*it)->box);
-            m_world->DestroyBody((*it)->wheel);
+            //m_world->DestroyBody((*it)->wheel);
             removeBotByID((*it)->id);
         }
 
