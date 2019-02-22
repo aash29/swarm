@@ -12,8 +12,15 @@
 #include "coinsLog.h"
 
 
+
 #define jointType b2DistanceJoint
 
+namespace ImGui
+{
+    int Curve(const char *label, const ImVec2& size, int maxpoints, ImVec2 *points);
+    float CurveValue(float p, int maxpoints, const ImVec2 *points);
+    float CurveValueSmooth(float p, int maxpoints, const ImVec2 *points);
+};
 
 
 
@@ -737,6 +744,27 @@ public:
         }
          */
 
+
+/*
+        ImVec2 foo[10];
+        foo[0].x = 0.1f; // init data so editor knows to take it from here
+        foo[0].y = 0.0f;
+        foo[1].x = 0.2f;
+        foo[1].y = 0.7f;
+
+        //foo[2].x = 10;
+        //foo[2].y = -10;
+
+
+        if (ImGui::Curve("Torque editor", ImVec2(600, 200), 2, foo))
+        {
+            // curve changed
+        }
+
+        float value_you_care_about = ImGui::CurveValue(0.7f, 10, foo); // calculate value at position 0.7
+
+ */
+
         updateJoints();
         DrawMagnetScheme();
 
@@ -762,7 +790,7 @@ public:
         ImGui::SliderFloat("KP", &KP, -400.0f, 400.0f);
         ImGui::SliderFloat("KD", &KD, -850.0f, 850.0f);
 
-		ImGui::SliderFloat("MAXM", &MAXM, 0.0f, 400.0f);
+		ImGui::SliderFloat("MAXM", &MAXM, 0.0f, 1200.0f);
 
 		//settings->pause = pause;
 		this->settings = settings;
@@ -790,7 +818,7 @@ public:
 
                 float phi = b1->box->GetAngle();
 
-                float a1 = atan2(sin(phi),cos(phi)) - b1->zero;
+                float a1 = atan2(sin(phi),cos(phi)) + b1->zero;
                 float a2 = b1->refAngle;
 
 
@@ -809,10 +837,10 @@ public:
 
 
 
-                ImGui::Text("angle: %g", b1->box->GetAngle());
-                ImGui::Text("angle / 2Pi: %g", b1->box->GetAngle() / (2*b2_pi));
-                ImGui::Text("floor(angle / 2Pi): %g", floor(b1->box->GetAngle() / (2*b2_pi)));
-                ImGui::Text("atan2(cos(phi),sin(phi)): %g", atan2(sin(phi),cos(phi)));
+                ImGui::Text("a1: %g", a1);
+                ImGui::Text("zero: %g", b1->zero);
+                //ImGui::Text("floor(angle / 2Pi): %g", floor(b1->box->GetAngle() / (2*b2_pi)));
+                //ImGui::Text("atan2(cos(phi),sin(phi)): %g", atan2(sin(phi),cos(phi)));
 
 
 
@@ -848,12 +876,17 @@ public:
 
 			ImGui::Checkbox("feedback", &b1->feedback);
 
+
+            float phi = b1->box->GetAngle();
+
+            float a1 = atan2(sin(phi),cos(phi));
+
+
             b2Vec2 z1 = b1->box->GetWorldVector(b2Vec2(cos(b1->zero), sin(b1->zero)));
             b2Vec2 z2 = (m_mouseWorld - b1->box->GetPosition());
 
 
             float a2 = atan2(z2.y, z2.x);
-
 
 
 				if (leftMouseDown){
@@ -862,7 +895,7 @@ public:
 
 
 					if (z2.Length() < 3.f) {
-						//b1->zero = remainder(a2 - b1->box->GetAngle(),2*b2_pi);
+						//b1->zero = atan2(sin(a2 - a1),cos(a2 - a1));
 					}
 					else {
 						b1->refAngle = a2;
@@ -871,7 +904,7 @@ public:
 				//b1->integratedError += sin(a1 - a2)*1.f / settings->hz;
 
 				g_debugDraw.DrawSegment(b1->box->GetPosition(), m_mouseWorld, b2Color(1.f, 1.f, 1.f));
-				g_debugDraw.DrawSegment(b1->box->GetPosition(), b1->box->GetPosition() + z1, b2Color(1.f, 0.f, 0.f));
+				g_debugDraw.DrawSegment(b1->box->GetPosition(), b1->box->GetPosition() + 2.f*z1, b2Color(1.f, 0.f, 0.f));
 
 				//
 				//ImGui::Text("target angle: %g", a2);

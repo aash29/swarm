@@ -17,12 +17,17 @@
 */
 
 #include "imgui.h"
-#include "RenderGL3.h"
+
+#include "glad/glad.h"
+
 #include "DebugDraw.h"
 #include "Test.h"
 #include "Car.h"
+#include "curve.hpp"
 
-#include "imgui_impl_glfw_gl3.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 
 #include "graph.h"
 
@@ -30,12 +35,12 @@
 #include <OpenGL/gl3.h>
 #else
 
-#include <GL/glew.h>
+//#include <GL/glew.h>
 
 #endif
 
 #include <GLFW/glfw3.h>
-#include "imgui_impl_glfw_gl3.h"
+#include "imgui_impl_glfw.h"
 
 
 #include <GLFW/glfw3.h>
@@ -81,7 +86,7 @@ static void sCreateUI() {
     // Init UI
     const char *fontPath = "DroidSans.ttf";
 
-    if (RenderGLInit(fontPath) == false) {
+    if (ImGui_ImplOpenGL3_Init(fontPath) == false) {
         fprintf(stderr, "Could not init GUI renderer.\n");
         assert(false);
         return;
@@ -452,6 +457,12 @@ int main(int argc, char **argv) {
     _CrtSetDbgFlag(_CRTDBG_LEAK_CHECK_DF | _CrtSetDbgFlag(_CRTDBG_REPORT_FLAG));
 #endif
 
+    const char* glsl_version = "#version 130";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
     g_camera.m_width = 1024;
     g_camera.m_height = 640;
 
@@ -464,13 +475,24 @@ int main(int argc, char **argv) {
     sprintf(title, "Cubeswarm");
 
 
+
     mainWindow = glfwCreateWindow(g_camera.m_width, g_camera.m_height, title, NULL, NULL);
 
-    //gl3wInit();
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
 
-    // Setup ImGui binding
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsClassic();
 
-    ImGui_ImplGlfwGL3_Init(mainWindow, true);
+    // Setup Platform/Renderer bindings
+    ImGui_ImplGlfw_InitForOpenGL(mainWindow, true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+
 
     if (mainWindow == NULL) {
         fprintf(stderr, "Failed to open GLFW mainWindow.\n");
@@ -479,6 +501,13 @@ int main(int argc, char **argv) {
     }
 
     glfwMakeContextCurrent(mainWindow);
+
+    if(!gladLoadGL()) {
+        printf("Something went wrong!\n");
+        //fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
+        exit(-1);
+    }
+
     printf("OpenGL %s, GLSL %s\n", glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION));
 
     glfwSetScrollCallback(mainWindow, sScrollCallback);
@@ -489,13 +518,14 @@ int main(int argc, char **argv) {
     glfwSetCursorPosCallback(mainWindow, sMouseMotion);
     glfwSetScrollCallback(mainWindow, sScrollCallback);
 
+
 #if defined(__APPLE__) == FALSE
     //glewExperimental = GL_TRUE;
-    GLenum err = glewInit();
-    if (GLEW_OK != err) {
-        fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
-        exit(EXIT_FAILURE);
-    }
+    //GLenum err = glewInit();
+    //if (GLEW_OK != err) {
+    //    fprintf(stderr, "Error: %s\n", glewGetErrorString(err));
+    //    exit(EXIT_FAILURE);
+    //}
 #endif
 
     g_debugDraw.Create();
@@ -542,7 +572,10 @@ int main(int argc, char **argv) {
 
 
         glfwPollEvents();
-        ImGui_ImplGlfwGL3_NewFrame();
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
 
 
         // 1. Show a simple window
@@ -559,14 +592,17 @@ int main(int argc, char **argv) {
 
         char buffer[32];
         snprintf(buffer, 32, "%.1f ms", 1000.0 * frameTime);
-        AddGfxCmdText(5, 5, TEXT_ALIGN_LEFT, buffer, WHITE);
+        //AddGfxCmdText(5, 5, TEXT_ALIGN_LEFT, buffer, WHITE);
 
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glDisable(GL_DEPTH_TEST);
-        RenderGLFlush(g_camera.m_width, g_camera.m_height);
+        //RenderGLFlush(g_camera.m_width, g_camera.m_height);
+
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         ImGui::Render();
         glfwSwapBuffers(mainWindow);
+
 
         glfwPollEvents();
 
@@ -588,9 +624,12 @@ int main(int argc, char **argv) {
 
 
     }
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     g_debugDraw.Destroy();
-    RenderGLDestroy();
+
     glfwTerminate();
 
     return 0;

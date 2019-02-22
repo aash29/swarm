@@ -5,7 +5,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 include_directories(/usr/include/Box2D /home/aash29/cpp/swarm)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -W -Wall -Wextra -g")
-set(SOURCE_FILES main.cpp Test.cpp DebugDraw.cpp RenderGL3.cpp TestEntries.cpp imgui.cpp imgui_draw.cpp imgui_impl_glfw_gl3.cpp curve.cpp)
+set(SOURCE_FILES main.cpp Test.cpp DebugDraw.cpp  TestEntries.cpp imgui.cpp imgui_draw.cpp imgui_widgets.cpp imgui_impl_glfw.cpp imgui_impl_opengl3.cpp glad/glad.c)
 
 set(SOURCE_DIR /home/aash29/cpp/swarm)
 
@@ -24,4 +24,4 @@ find_package(Box2D)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLFW REQUIRED glfw3)
 
-target_link_libraries(swarm GLEW; OpenGL; glfw ; Box2D)
+target_link_libraries(swarm GLEW; OpenGL; glfw ; Box2D; dl)
