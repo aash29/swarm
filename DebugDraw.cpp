@@ -198,7 +198,7 @@ struct GLRenderPoints
 	void Create()
 	{
 		const char* vs = \
-        "#version 130\n"
+		"#version 410 core\n"
         "uniform mat4 projectionMatrix;\n"
         "layout(location = 0) in vec2 v_position;\n"
         "layout(location = 1) in vec4 v_color;\n"
@@ -212,7 +212,7 @@ struct GLRenderPoints
         "}\n";
         
 		const char* fs = \
-        "#version 130\n"
+		"#version 410 core\n"
         "in vec4 f_color;\n"
         "out vec4 color;\n"
         "void main(void)\n"
@@ -342,7 +342,7 @@ struct GLRenderLines
 	void Create()
 	{
 		const char* vs = \
-        "#version 130\n"
+		"#version 410 core\n"
         "uniform mat4 projectionMatrix;\n"
         "layout(location = 0) in vec2 v_position;\n"
         "layout(location = 1) in vec4 v_color;\n"
@@ -354,7 +354,7 @@ struct GLRenderLines
         "}\n";
         
 		const char* fs = \
-        "#version 130\n"
+		"#version 410 core\n"
         "in vec4 f_color;\n"
         "out vec4 color;\n"
         "void main(void)\n"
@@ -470,7 +470,7 @@ struct GLRenderTriangles
 	void Create()
 	{
 		const char* vs = \
-			"#version 130\n"
+			"#version 410 core\n"
 			"uniform mat4 projectionMatrix;\n"
 			"layout(location = 0) in vec2 v_position;\n"
 			"layout(location = 1) in vec4 v_color;\n"
@@ -482,7 +482,7 @@ struct GLRenderTriangles
 			"}\n";
 
 		const char* fs = \
-			"#version 130\n"
+			"#version 410 core\n"
 			"in vec4 f_color;\n"
             "out vec4 color;\n"
 			"void main(void)\n"

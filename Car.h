@@ -464,8 +464,8 @@ public:
                         short int h2 =  j << 8 | l;
                         id = symmHash(h1,h2);
 
-                        b2Vec2 p1 = ((b2PolygonShape *) ((bots)[i]->fix->GetShape()))->GetVertex(k);
-                        b2Vec2 p2 = ((b2PolygonShape *) ((bots)[j]->fix->GetShape()))->GetVertex(l);
+                        b2Vec2 p1 = ((b2PolygonShape *) (bots)[i]->fix->GetShape())->m_vertices[k];
+                        b2Vec2 p2 = ((b2PolygonShape *) (bots)[j]->fix->GetShape())->m_vertices[l];
                         (bots)[i]->magnets[k].pos = (bots)[i]->box->GetWorldPoint(p1);
                         (bots)[j]->magnets[l].pos = (bots)[j]->box->GetWorldPoint(p2);
 
