@@ -768,7 +768,7 @@ public:
         updateJoints();
         DrawMagnetScheme();
 
-        ImGui::SliderFloat("Torque", &(bots[0]->torque), -150.0f, 150.0f);
+        ImGui::SliderFloat("Torque", &(bots[0]->torque), -1500.0f, 1500.0f);
 
 
 
@@ -786,7 +786,7 @@ public:
 
         static float KI=-20.f, KP=-200.f, KD=-40.f, MAXM = 400.0f;
 
-		ImGui::SliderFloat("KI", &KI, -10.0f, 10.0f);
+		ImGui::SliderFloat("KI", &KI, -40.0f, 40.0f);
         ImGui::SliderFloat("KP", &KP, -400.0f, 400.0f);
         ImGui::SliderFloat("KD", &KD, -850.0f, 850.0f);
 

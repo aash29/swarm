@@ -493,9 +493,26 @@ int main(int argc, char **argv) {
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.ScaleAllSizes(2.0);
+
+    io.FontGlobalScale = 2.f;
+
+    ImFontConfig config;
+    config.OversampleH = 3;
+    config.OversampleV = 3;
+    config.GlyphExtraSpacing.x = 1.0f;
+
+    ImFont* font1 = io.Fonts->AddFontFromFileTTF("DroidSans.ttf", 14, &config);
+
+
+
     // Setup Platform/Renderer bindings
     ImGui_ImplGlfw_InitForOpenGL(mainWindow, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+
+
+
 
 
 
